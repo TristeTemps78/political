@@ -1,0 +1,54 @@
+# 🏛️ PolitiQuest 2027
+
+Prototype d'application civique ludique pour les élections présidentielles et législatives
+françaises de 2027, à destination des 15–40 ans. PWA statique, **zéro dépendance, zéro build,
+zéro collecte de données**.
+
+## Lancer
+
+```bash
+python3 -m http.server 8080
+# puis ouvrir http://localhost:8080
+```
+
+N'importe quel serveur statique convient. L'application est installable (PWA) et fonctionne
+hors ligne après le premier chargement.
+
+## Les trois strates de jeu
+
+1. **🧭 Boussole** — apprentissage systémique : sur 6 thèmes (climat, fiscalité, sécurité,
+   travail, Europe, institutions), on répartit un budget limité entre des politiques
+   concurrentes. Le coût d'opportunité remplace le swipe binaire. Le profil (4 axes,
+   7 familles idéologiques génériques) est calculé **exclusivement sur l'appareil**.
+2. **🗺️ Conquête** — métajeu de monopolisation : le capital politique gagné en apprenant
+   s'investit sur un cartogramme des **577 circonscriptions réelles** (regroupées par
+   département et région). Objectif : la majorité absolue, **289 sièges**, face à des guildes
+   rivales simulées. Le multijoueur réel est spécifié pour la phase 3.
+3. **🏛️ Hémicycle, 🕸️ Alliances, 🗳️ Scrutins** — visualisation : hémicycle SVG des 577 sièges,
+   graphe de réseau des alliances de vote (nœuds = députés, arêtes = concordance > 70 %),
+   défis prédictifs sur l'issue de scrutins. Actuellement alimentés par des **données fictives
+   de démonstration, étiquetées comme telles dans l'interface** ; l'adaptateur
+   (`js/adapter.js`) est prêt pour l'open data de l'Assemblée nationale en phase 2.
+
+## Vie privée (invariant n° 1)
+
+Réponses, axes et affinités ne quittent **jamais** le terminal (`localStorage`). Export et
+effacement intégral des données en un clic (onglet Profil). Le moteur d'affinité est en clair
+dans `js/affinity.js`, pondérations documentées — destiné à une publication AGPL-3.0.
+
+## Documentation
+
+Toute l'ingénierie du projet est consignée dans [`docs_architecture/`](docs_architecture/) :
+
+| Fichier | Contenu |
+|---|---|
+| `00_analyse_technique.md` | Analyse critique du cahier des charges, décisions d'architecture, roadmap |
+| `01_memory_lessons.md` | Journal des décisions, invariants, incidents (mémoire inter-sessions) |
+| `02_data_schemas.md` | Schémas de persistance, modèles, contrat du futur backend multijoueur |
+| `03_game_loop.md` | Boucle de jeu et justification de chaque constante d'équilibrage |
+
+## Neutralité
+
+Le jeu ne référence aucun parti ni aucune personne réelle : l'affinité se calcule vers des
+familles idéologiques génériques dont les vecteurs sont publics et auditables. Le rattachement
+à des programmes réels sera une couche éditoriale séparée, sourcée et pluraliste (phase 4).
