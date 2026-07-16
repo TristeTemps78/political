@@ -4,7 +4,7 @@
 import { THEMES, FAMILLES } from './data.js';
 import { AXES, computeAxes, computeAffinites } from './affinity.js';
 import { load, update } from './store.js';
-import { ECONOMIE, gagnerCapital } from './guilds.js';
+import { ECONOMIE, gagnerCapital, prefersReducedMotion } from './guilds.js';
 
 export function renderQuiz(root) {
   const s = load();
@@ -12,7 +12,8 @@ export function renderQuiz(root) {
     <div class="privacy-note">🔒 Vos réponses et votre profil restent sur cet appareil. Rien n’est envoyé sur le réseau.</div>
     <div id="quiz-list"></div>
     <div id="quiz-detail"></div>
-    <div id="quiz-result"></div>`;
+    <div id="quiz-result"></div>
+    <div id="quiz-live" class="visually-hidden" role="status"></div>`;
   renderList(root.querySelector('#quiz-list'), root);
   if (s.profil.axes) renderResult(root.querySelector('#quiz-result'));
 }
@@ -37,38 +38,61 @@ function renderTheme(root, themeId) {
   const alloc = { ...(s.profil.reponses[themeId] || Object.fromEntries(theme.options.map((o) => [o.id, 0]))) };
   const detail = root.querySelector('#quiz-detail');
 
-  const draw = () => {
+  const annoncer = (optId) => {
+    const live = root.querySelector('#quiz-live');
+    if (!live) return;
+    const opt = theme.options.find((o) => o.id === optId);
+    const reste = theme.budget - Object.values(alloc).reduce((a, b) => a + b, 0);
+    live.textContent = `${opt.libelle} : ${alloc[optId]} point${alloc[optId] > 1 ? 's' : ''}. Budget restant : ${reste}.`;
+  };
+
+  const draw = (focusSelector) => {
     const total = Object.values(alloc).reduce((a, b) => a + b, 0);
     const reste = theme.budget - total;
     detail.innerHTML = `
       <div class="panel">
-        <h3>${theme.icone} ${theme.titre}</h3>
+        <h3 id="titre-theme" tabindex="-1">${theme.icone} ${theme.titre}</h3>
         <p class="contexte">${theme.contexte}</p>
         <p class="budget-restant ${reste === 0 ? 'ok' : ''}">Budget restant : <strong>${reste}</strong> / ${theme.budget} points</p>
         ${theme.options.map((o) => `
           <div class="alloc-row">
-            <span class="alloc-libelle">${o.libelle}</span>
+            <span class="alloc-libelle" id="lib-${o.id}">${o.libelle}</span>
             <span class="alloc-controls">
-              <button class="btn-mini" data-moins="${o.id}" aria-label="Retirer un point">−</button>
-              <span class="alloc-val">${alloc[o.id]}</span>
-              <button class="btn-mini" data-plus="${o.id}" aria-label="Ajouter un point">+</button>
+              <button class="btn-mini" data-moins="${o.id}" aria-label="Retirer un point — ${o.libelle} (${alloc[o.id]} actuellement)" ${alloc[o.id] === 0 ? 'disabled' : ''}>−</button>
+              <span class="alloc-val" aria-hidden="true">${alloc[o.id]}</span>
+              <button class="btn-mini" data-plus="${o.id}" aria-label="Ajouter un point — ${o.libelle} (${alloc[o.id]} actuellement)" ${reste === 0 ? 'disabled' : ''}>+</button>
             </span>
-            <span class="alloc-bar"><span style="width:${(alloc[o.id] / theme.budget) * 100}%"></span></span>
+            <span class="alloc-bar" aria-hidden="true"><span style="width:${(alloc[o.id] / theme.budget) * 100}%"></span></span>
           </div>`).join('')}
         <button class="btn-primaire" id="valider-theme" ${reste !== 0 ? 'disabled' : ''}>
           ${reste === 0 ? 'Valider mes arbitrages' : `Allouez encore ${reste} point${reste > 1 ? 's' : ''}`}
         </button>
       </div>`;
     detail.querySelectorAll('[data-plus]').forEach((b) => b.addEventListener('click', () => {
-      if (Object.values(alloc).reduce((a, c) => a + c, 0) < theme.budget) { alloc[b.dataset.plus] += 1; draw(); }
+      if (Object.values(alloc).reduce((a, c) => a + c, 0) < theme.budget) {
+        alloc[b.dataset.plus] += 1;
+        draw(`[data-plus="${b.dataset.plus}"]`);
+        annoncer(b.dataset.plus);
+      }
     }));
     detail.querySelectorAll('[data-moins]').forEach((b) => b.addEventListener('click', () => {
-      if (alloc[b.dataset.moins] > 0) { alloc[b.dataset.moins] -= 1; draw(); }
+      if (alloc[b.dataset.moins] > 0) {
+        alloc[b.dataset.moins] -= 1;
+        draw(`[data-moins="${b.dataset.moins}"]`);
+        annoncer(b.dataset.moins);
+      }
     }));
     detail.querySelector('#valider-theme').addEventListener('click', () => valider(root, themeId, alloc));
+    if (focusSelector) {
+      const el = detail.querySelector(focusSelector);
+      // Un bouton +/− devenu disabled ne peut pas garder le focus : replier sur son jumeau.
+      if (el && !el.disabled) el.focus();
+      else detail.querySelector(focusSelector.startsWith('[data-plus') ? focusSelector.replace('data-plus', 'data-moins') : focusSelector.replace('data-moins', 'data-plus'))?.focus();
+    }
   };
   draw();
-  detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  detail.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  detail.querySelector('#titre-theme').focus();
 }
 
 function valider(root, themeId, alloc) {
@@ -103,10 +127,13 @@ function renderResult(el) {
       <h3>Votre boussole (${s.joueur.quizFaits.length}/${THEMES.length} thèmes)</h3>
       ${AXES.map((a) => {
         const v = s.profil.axes[a.id];
+        const texte = Math.abs(v) < 0.2 ? 'position équilibrée'
+          : `plutôt « ${v < 0 ? a.gauche : a.droite} » (${Math.round(Math.abs(v) * 100)} %)`;
         return `<div class="axe-row">
-          <span class="axe-pole">${a.gauche}</span>
-          <span class="axe-track"><span class="axe-dot" style="left:${((v + 1) / 2) * 100}%"></span></span>
-          <span class="axe-pole droit">${a.droite}</span>
+          <span class="visually-hidden">${a.nom} : ${texte}.</span>
+          <span class="axe-pole" aria-hidden="true">${a.gauche}</span>
+          <span class="axe-track" aria-hidden="true"><span class="axe-dot" style="left:${((v + 1) / 2) * 100}%"></span></span>
+          <span class="axe-pole droit" aria-hidden="true">${a.droite}</span>
         </div>`;
       }).join('')}
       <h4>Familles les plus proches</h4>

@@ -80,7 +80,9 @@ export async function renderGraph(root) {
     }
   }
 
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Graphe des alliances de vote">`;
+  // role="group" (et non "img") : les nœuds internes sont focusables et
+  // interactifs — un role img les rendrait invisibles aux lecteurs d'écran.
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="group" aria-label="Graphe des alliances de vote — chaque nœud est un député activable">`;
   for (const e of edges) {
     const a = nodes[e.source], b = nodes[e.target];
     svg += `<line x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}"
@@ -96,7 +98,7 @@ export async function renderGraph(root) {
 
   const detail = root.querySelector('#depute-detail');
   root.querySelectorAll('.node').forEach((c) => {
-    const ouvrir = () => {
+    const ouvrir = (auClavier = false) => {
       const n = nodes[Number(c.dataset.i)];
       const f = FAMILLES.find((x) => x.id === n.groupe);
       const voisins = edges
@@ -109,7 +111,7 @@ export async function renderGraph(root) {
         .slice(0, 5);
       detail.innerHTML = `
         <div class="panel">
-          <h4><span class="pastille" style="background:${f.couleur}"></span> ${n.nom} <em>(fiche de démonstration)</em></h4>
+          <h4 id="titre-depute" tabindex="-1"><span class="pastille" style="background:${f.couleur}"></span> ${n.nom} <em>(fiche de démonstration)</em></h4>
           <p>${f.nom} — ${n.circoNom}. Loyauté de groupe : ${Math.round(n.loyaute * 100)} %.</p>
           <p><strong>Alliés de vote les plus proches :</strong></p>
           ${voisins.map((v) => `<div class="affinite-row">
@@ -117,9 +119,10 @@ export async function renderGraph(root) {
             <span class="affinite-nom">${v.autre.nom}</span>
             <span class="affinite-score">${Math.round(v.poids * 100)} % d’accord</span></div>`).join('') || '<p>Aucune alliance au-dessus du seuil.</p>'}
         </div>`;
+      if (auClavier) detail.querySelector('#titre-depute').focus();
       consulterDepute();
     };
-    c.addEventListener('click', ouvrir);
-    c.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ouvrir(); } });
+    c.addEventListener('click', () => ouvrir(false));
+    c.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ouvrir(true); } });
   });
 }

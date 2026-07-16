@@ -34,8 +34,9 @@ function renderStatus() {
 function renderNav() {
   const nav = document.getElementById('nav');
   nav.innerHTML = ONGLETS.map((o) =>
-    `<button class="nav-btn ${o.id === ongletActif ? 'actif' : ''}" data-onglet="${o.id}" aria-label="${o.nom}">
-      <span class="nav-icone">${o.icone}</span><span class="nav-nom">${o.nom}</span>
+    `<button class="nav-btn ${o.id === ongletActif ? 'actif' : ''}" data-onglet="${o.id}"
+      ${o.id === ongletActif ? 'aria-current="page"' : ''}>
+      <span class="nav-icone" aria-hidden="true">${o.icone}</span><span class="nav-nom">${o.nom}</span>
     </button>`).join('');
   nav.querySelectorAll('[data-onglet]').forEach((b) =>
     b.addEventListener('click', () => afficher(b.dataset.onglet)));

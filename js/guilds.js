@@ -106,16 +106,26 @@ export function consulterDepute() {
   gagnerCapital(ECONOMIE.CONSULTATION, 'exploration de l’hémicycle');
 }
 
+export function prefersReducedMotion() {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
 let toastTimer = null;
 export function toast(msg) {
   let el = document.getElementById('toast');
   if (!el) {
     el = document.createElement('div');
     el.id = 'toast';
+    el.setAttribute('role', 'status'); // annoncé par les lecteurs d'écran
     document.body.appendChild(el);
   }
   el.textContent = msg;
   el.classList.add('visible');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('visible'), 2600);
+  toastTimer = setTimeout(() => {
+    el.classList.remove('visible');
+    // Vider le texte une fois le fondu terminé : un toast masqué ne doit rien
+    // laisser dans l'arbre d'accessibilité (texte périmé pour les lecteurs d'écran).
+    setTimeout(() => { if (!el.classList.contains('visible')) el.textContent = ''; }, 300);
+  }, 2600);
 }

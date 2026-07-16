@@ -19,7 +19,19 @@ hors ligne après le premier chargement.
 ```bash
 node --test tests/*.test.mjs   # 17 tests : référentiel, moteur d'affinité, équité, économie
 node tools/simulate.mjs 1000   # simulation d'équilibrage (vrai code du jeu sous Node)
+node tools/a11y-audit.mjs      # accessibilité : parcours clavier + axe-core (WCAG AA)
+                               # (nécessite un serveur statique + playwright-core + axe-core)
 ```
+
+## Accessibilité
+
+L'application est utilisable entièrement au clavier et compatible lecteurs d'écran :
+le cartogramme des 577 circonscriptions suit le pattern « grid » (un seul point de
+tabulation, navigation aux flèches — ←/→ circonscription, ↑/↓ département, Entrée pour
+ouvrir), l'état de chaque circonscription est porté par son étiquette (pas seulement par
+la couleur), le quiz annonce les allocations via une région live, le focus est géré à
+chaque changement de panneau, et `prefers-reduced-motion` est respecté. Audit automatisé :
+zéro violation axe-core (WCAG 2.0/2.1 AA) sur les six onglets.
 
 Les propriétés clés sont testées en continu (CI GitHub Actions) : 577 circonscriptions,
 sensibilité du moteur aux magnitudes d'allocation, **équité inter-familles** (σ < 0,05 sur

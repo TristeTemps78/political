@@ -79,3 +79,32 @@
   Attention : `node --test tests/` ne résout pas les modules — passer le glob explicite.
 - `node tools/simulate.mjs [n]` — simulation d'équilibrage.
 - CI GitHub Actions : `.github/workflows/tests.yml` (tests + simulation à 200 parties).
+
+## 2026-07-16 — Session accessibilité (phase 1, suite)
+
+### Ce qui a été mis en place (validé par tools/a11y-audit.mjs : parcours clavier + axe-core)
+- **Cartogramme = pattern « grid »** : les 577 cellules n'exposent qu'UN point de tabulation
+  (tabindex tournant, module `rovingIdx` dans js/map.js) ; ←/→ cellule suivante/précédente,
+  ↑/↓ département suivant/précédent, Home/End, Entrée ouvre le détail. Ne pas casser ce
+  pattern en ajoutant des cellules tabbables.
+- **L'état n'est plus porté que par la couleur** : chaque cellule a un aria-label complet
+  (« Paris — 3ᵉ circonscription, contestée, X en tête avec n points »).
+- **Gestion du focus** : ouverture d'un panneau → focus sur son titre (tabindex="-1") ;
+  après un investissement (re-rendu complet), focus restauré sur « Investir » pour permettre
+  Entrée-Entrée-Entrée ; bouton +/− désactivé → repli du focus sur son jumeau.
+- **Régions live** : #quiz-live (stable, hors des zones re-rendues — condition de
+  fonctionnement d'aria-live), toast role="status".
+- Boussole : description textuelle par axe (visually-hidden), graphiques aria-hidden.
+- SVG : hémicycle role="img" (l'info est dans la légende) ; graphe role="group" car ses
+  nœuds sont focusables — un role="img" les aplatirait pour les lecteurs d'écran.
+- :focus-visible global, prefers-reduced-motion (CSS + scrollIntoView).
+
+### Pièges appris
+- **aria-live doit être un élément STABLE** : une région re-créée par innerHTML à chaque
+  rendu n'annonce rien. D'où #quiz-live placé hors de #quiz-detail.
+- **Toast en fondu = faux positif axe color-contrast** : axe peut échantillonner l'élément à
+  opacité ~0,1. Correctifs : visibility:hidden hors affichage + texte vidé après le fondu
+  (un toast masqué ne doit rien laisser dans l'arbre d'accessibilité) ; l'audit neutralise
+  les toasts en cours de fondu avant chaque axe.run.
+- Résolution ESM dans tools/ : résoudre les dépendances depuis process.cwd() (createRequire)
+  pour que le script vive dans le dépôt sans node_modules.

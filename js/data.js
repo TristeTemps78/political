@@ -124,7 +124,7 @@ export const CIRCOS = DEPARTEMENTS.flatMap((d) =>
     id: `${d.code}-${String(i + 1).padStart(2, '0')}`,
     dept: d.code,
     num: i + 1,
-    nom: `${d.nom} — ${i + 1}ᵉ circonscription`,
+    nom: `${d.nom} — ${i === 0 ? '1ʳᵉ' : `${i + 1}ᵉ`} circonscription`,
     region: d.region,
   }))
 );

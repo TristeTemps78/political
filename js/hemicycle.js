@@ -14,8 +14,8 @@ export function renderHemicycle(root, mode = 'virtuel') {
     <div class="panel">
       <h3>L’hémicycle — 577 sièges, majorité absolue à ${MAJORITE_ABSOLUE}</h3>
       <div class="onglets-secondaires">
-        <button class="btn-secondaire ${mode === 'virtuel' ? 'actif' : ''}" data-mode="virtuel">Assemblée virtuelle (votre partie)</button>
-        <button class="btn-secondaire ${mode === 'demo' ? 'actif' : ''}" data-mode="demo">Assemblée de démonstration</button>
+        <button class="btn-secondaire ${mode === 'virtuel' ? 'actif' : ''}" data-mode="virtuel" aria-pressed="${mode === 'virtuel'}">Assemblée virtuelle (votre partie)</button>
+        <button class="btn-secondaire ${mode === 'demo' ? 'actif' : ''}" data-mode="demo" aria-pressed="${mode === 'demo'}">Assemblée de démonstration</button>
       </div>
       <div id="hemicycle-svg"></div>
       <div id="hemicycle-legende" class="legende"></div>
@@ -78,7 +78,9 @@ function dessiner(el, sieges) {
   }
   positions.sort((a, b) => b.angle - a.angle || a.row - b.row);
 
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hémicycle de 577 sièges">`;
+  // role="img" : le contenu du SVG est purement graphique, la légende textuelle
+  // (comptage par guilde) porte la même information pour les lecteurs d'écran.
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hémicycle de 577 sièges — répartition détaillée dans la légende ci-dessous">`;
   positions.forEach((p, i) => {
     const r = rayons[p.row];
     const x = cx + r * Math.cos(p.angle);
