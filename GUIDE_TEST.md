@@ -85,7 +85,7 @@ Ouvrir http://localhost:8080 — idéalement dans une fenêtre de navigation pri
 ## 6. Vérifications automatisées (optionnel, 2 min)
 
 ```bash
-node --test tests/*.test.mjs   # attendu : 17/17 pass
+node --test tests/*.test.mjs   # attendu : 25/25 pass
 node tools/simulate.mjs 500    # attendu : 1er contrôle ~5 investissements ; plafond solo ≪ 289
 ```
 
@@ -93,8 +93,9 @@ node tools/simulate.mjs 500    # attendu : 1er contrôle ~5 investissements ; pl
 
 - Députés, scrutins et composition « démo » sont **fictifs** (données réelles de
   l'Assemblée nationale prévues en phase 2 via `js/adapter.js`).
-- Le multijoueur est **simulé** par 6 guildes IA locales (backend réel spécifié pour la
-  phase 3) — pas encore d'invitations entre amis.
+- Le multijoueur de conquête est **simulé** par 6 guildes IA locales (backend réel
+  spécifié pour la phase 3) — les défis entre amis existent (par lien), mais pas encore
+  les guildes partagées sur une même carte.
 - La carte est un **cartogramme** (1 cellule = 1 siège), pas un fond de carte géographique :
   c'est un choix documenté (`docs_architecture/00_analyse_technique.md` §1.1).
 
