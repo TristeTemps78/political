@@ -32,9 +32,50 @@
 - Schéma de persistance versionné : toute modification incrémente `SCHEMA_VERSION` dans
   `js/store.js` et fournit une migration.
 
-### Incidents / pièges rencontrés
+### Incidents / pièges rencontrés (session fondation)
 - `curl data.gouv.fr` → 403 CONNECT via proxy : ne pas re-tenter en boucle, l'égresse est
   une liste blanche. Prévoir les jeux de données en fixtures versionnées.
 - Répartition des 577 circonscriptions par département reconstituée de mémoire (découpage
   2010 en vigueur) et verrouillée par l'assertion de somme ; à re-valider contre le
   référentiel officiel INSEE/Ministère de l'Intérieur en phase 2 avant toute publication.
+
+## 2026-07-16 — Session durcissement (phase 1)
+
+### Deux défauts réels découverts par audit critique du moteur d'affinité
+
+1. **Bug de saturation des axes** (`js/affinity.js`). L'ancienne normalisation
+   (`poids += |valeur| × pts`) annulait les magnitudes : toute allocation sur des options de
+   même signe donnait exactement ±1,0 — 1 point sur un effet 0,9 pesait autant que 12 points.
+   La « nuance » revendiquée par le produit était mathématiquement absente.
+   → Correctif : dilution par les points alloués (`poids += pts`). Test de régression :
+   `tests/affinity.test.mjs` (« la magnitude des allocations compte »).
+
+2. **Biais structurel d'équité** (σ = 0,25 mesuré sur 3 000 profils aléatoires !).
+   Deux causes combinées : (a) la distance euclidienne favorise les familles au vecteur
+   proche du centre ; (b) le contenu des thèmes est directionnellement déséquilibré
+   (ex. les 4 options « climat » ont toutes un effet écologie ≥ 0), donc un répondant
+   indifférent obtenait un vecteur non nul.
+   → Correctifs : similarité cosinus (directions idéologiques) + **étalonnage de
+   l'instrument** : le zéro de chaque axe = la réponse uniforme, constante `ETALONNAGE`
+   dérivée automatiquement de `THEMES` (se recalcule si le contenu change), remise à
+   l'échelle symétrique de chaque demi-intervalle.
+   → Après correctif : σ < 0,05 ET chaque famille arrive en tête sur > 2 % des profils
+   aléatoires (testé en continu dans la suite).
+
+   Leçon générale : *tout changement de contenu éditorial (THEMES) peut réintroduire un
+   biais — c'est le test d'équité qui fait foi, pas l'intention rédactionnelle.*
+
+### Équilibrage validé par simulation (tools/simulate.mjs, vrai code du jeu sous Node)
+
+- Première circonscription contrôlée : 5 investissements (50 capital) dans 100 % des
+  1 000 parties — sous la cible « < 10 minutes de jeu ».
+- Plafond solo (2 000 capital ≈ joueur très assidu) : moyenne 34,7 sièges, max 39 ≪ 289 —
+  la majorité absolue exige la coopération de guilde, conformément au design.
+- Les doublures Node sont dans `tests/shims.mjs` (localStorage/document minimaux) :
+  les réutiliser pour tout futur test ou simulation, ne pas dupliquer la logique du jeu.
+
+### Outillage
+- `node --test tests/*.test.mjs` — 17 tests (référentiel, affinité, équité, économie).
+  Attention : `node --test tests/` ne résout pas les modules — passer le glob explicite.
+- `node tools/simulate.mjs [n]` — simulation d'équilibrage.
+- CI GitHub Actions : `.github/workflows/tests.yml` (tests + simulation à 200 parties).

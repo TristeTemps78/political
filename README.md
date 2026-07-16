@@ -14,6 +14,18 @@ python3 -m http.server 8080
 N'importe quel serveur statique convient. L'application est installable (PWA) et fonctionne
 hors ligne après le premier chargement.
 
+## Tester
+
+```bash
+node --test tests/*.test.mjs   # 17 tests : référentiel, moteur d'affinité, équité, économie
+node tools/simulate.mjs 1000   # simulation d'équilibrage (vrai code du jeu sous Node)
+```
+
+Les propriétés clés sont testées en continu (CI GitHub Actions) : 577 circonscriptions,
+sensibilité du moteur aux magnitudes d'allocation, **équité inter-familles** (σ < 0,05 sur
+profils aléatoires, chaque famille peut arriver en tête), premier contrôle rapide et
+plafond solo ≪ 289.
+
 ## Les trois strates de jeu
 
 1. **🧭 Boussole** — apprentissage systémique : sur 6 thèmes (climat, fiscalité, sécurité,

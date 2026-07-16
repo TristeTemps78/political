@@ -46,9 +46,15 @@ l'app) : chacune investit un budget borné sur des circos choisies par un PRNG d
 ensemencé (`monde.seed`) — parties reproductibles, équilibrage testable. Difficulté douce :
 budget IA ∝ avance du joueur (rubber-banding plafonné à ×1,5).
 
-## Équilibrages à valider en phase 1 (simulation 10 000 parties)
+## Équilibrages — VALIDÉS le 2026-07-16 (`tools/simulate.mjs`, `tests/affinity.test.mjs`)
 
-- Temps médian pour contrôler sa 1re circonscription : cible < 10 min.
-- Un joueur solo ne doit PAS pouvoir atteindre 289 (vérifier que le plafond solo ≈ 40 circos).
-- Aucune famille ne doit être favorisée par la géométrie des thèmes : l'écart-type des
-  affinités moyennes sur réponses aléatoires doit rester < 0,05.
+- ✅ 1re circonscription contrôlée : 5 investissements (50 capital) dans 100 % de
+  1 000 parties simulées — sous la cible « < 10 min » (≈ 2 thèmes de quiz suffisent).
+- ✅ Plafond solo : 34,7 sièges en moyenne, 39 au maximum (200 parties à 2 000 capital)
+  — un joueur seul ne peut pas approcher 289 ; la majorité exige la guilde.
+- ✅ Équité inter-familles : écart-type des affinités moyennes < 0,05 sur 3 000 profils
+  aléatoires, et chaque famille arrive en tête sur > 2 % des profils (après étalonnage de
+  l'instrument et passage à la similarité cosinus — voir 01_memory_lessons.md).
+
+Ces trois propriétés sont désormais des tests exécutés en CI : toute modification du
+contenu éditorial (THEMES) ou des constantes ECONOMIE qui les casse fera échouer le build.
