@@ -47,7 +47,24 @@ Ouvrir http://localhost:8080 — idéalement dans une fenêtre de navigation pri
       ←/→ (circonscription), ↑/↓ (département), Entrée (ouvrir), Entrée sur « Investir »
       → le focus reste sur le bouton pour enchaîner les investissements.
 
-## 4. Hémicycle, Alliances, Scrutins (4 min)
+## 3 bis. Nouveautés rétention (5 min)
+
+- [ ] **Partielles éclair** (onglet Conquête) : bandeau doré « Partielles du jour » listant
+      4 circonscriptions ; leurs cellules pulsent sur la carte ; y investir donne
+      **+2 influence** au lieu de +1 (vérifiable dans le détail).
+- [ ] **Duel « Pensez comme l'adversaire »** (onglet Défis) : incarnez p. ex. le
+      souverainisme sur le thème Europe — tout miser sur « Reprendre des compétences à
+      l'UE » doit donner une similarité élevée et du capital ; l'allocation canonique de la
+      famille est révélée après coup.
+- [ ] **Défi entre amis** : créez un défi (thème complété requis), copiez le lien, ouvrez-le
+      dans une **fenêtre privée** → l'app s'ouvre directement sur le défi, avec votre pseudo ;
+      la prédiction se résout immédiatement et révèle les arbitrages.
+- [ ] **Motion de censure** : difficile à atteindre naturellement en 20 min — pour la forcer,
+      console (F12) : donnez ~35 circos à une famille puis investissez une fois n'importe où.
+      Un bandeau rouge « Motion de censure contre… » doit apparaître sur la carte, et les
+      circonscriptions du leader deviennent prenables par la coalition.
+
+## 4. Hémicycle, Alliances, Défis-Scrutins (4 min)
 
 - [ ] Hémicycle : vos circonscriptions conquises apparaissent colorées parmi les 577
       sièges ; basculer sur « Assemblée de démonstration » → composition fictive,
@@ -55,7 +72,7 @@ Ouvrir http://localhost:8080 — idéalement dans une fenêtre de navigation pri
 - [ ] Alliances : graphe de ~24 députés (fictifs, étiquetés démo) ; cliquer un nœud →
       fiche avec alliés de vote les plus proches, +1 capital par consultation
       (plafonné à 15/jour).
-- [ ] Scrutins : parier 5-50 sur un scrutin, « Simuler le vote (démo) » → gain 2× la mise
+- [ ] Scrutins (bas de l’onglet Défis) : parier 5-50 sur un scrutin, « Simuler le vote (démo) » → gain 2× la mise
       ou perte ; impossible de re-parier sur le même scrutin.
 
 ## 5. Persistance et RGPD (2 min)

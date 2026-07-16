@@ -56,7 +56,7 @@ attendre((await page.evaluate(() => document.activeElement.id)) === 'btn-investi
   'focus conservé sur « Investir » après re-rendu (investissements répétés)');
 
 // --- axe-core sur chaque onglet ----------------------------------------------
-for (const onglet of ['quiz', 'carte', 'hemicycle', 'alliances', 'scrutins', 'profil']) {
+for (const onglet of ['quiz', 'carte', 'hemicycle', 'alliances', 'defis', 'profil']) {
   await page.click(`[data-onglet="${onglet}"]`);
   await page.waitForTimeout(400);
   // Neutraliser les toasts en cours de fondu : état transitoire hors périmètre WCAG,

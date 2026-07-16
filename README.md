@@ -48,11 +48,26 @@ plafond solo ≪ 289.
    s'investit sur un cartogramme des **577 circonscriptions réelles** (regroupées par
    département et région). Objectif : la majorité absolue, **289 sièges**, face à des guildes
    rivales simulées. Le multijoueur réel est spécifié pour la phase 3.
-3. **🏛️ Hémicycle, 🕸️ Alliances, 🗳️ Scrutins** — visualisation : hémicycle SVG des 577 sièges,
-   graphe de réseau des alliances de vote (nœuds = députés, arêtes = concordance > 70 %),
-   défis prédictifs sur l'issue de scrutins. Actuellement alimentés par des **données fictives
-   de démonstration, étiquetées comme telles dans l'interface** ; l'adaptateur
-   (`js/adapter.js`) est prêt pour l'open data de l'Assemblée nationale en phase 2.
+3. **🏛️ Hémicycle, 🕸️ Alliances, 🎯 Défis** — visualisation et défis : hémicycle SVG des
+   577 sièges, graphe de réseau des alliances de vote (nœuds = députés, arêtes =
+   concordance > 70 %), duels de débat et paris prédictifs sur l'issue de scrutins.
+   Députés et scrutins sont des **données fictives de démonstration, étiquetées comme
+   telles dans l'interface** ; l'adaptateur (`js/adapter.js`) est prêt pour l'open data
+   de l'Assemblée nationale en phase 2.
+
+## Les moteurs de rétention
+
+- **🔥 Partielles éclair** : chaque jour, 4 circonscriptions tirées au sort (déterministe
+  par la date — identique pour tous, sans serveur) passent en élection : influence ×2,
+  les guildes IA s'y ruent aussi.
+- **⚔️ Duels de débat** : « Pensez comme l'adversaire » (allouer un budget comme le ferait
+  une famille rivale — gagner = comprendre l'autre) et défis entre amis par lien
+  auto-porteur : votre ami doit prédire votre politique la plus financée. Le lien contient
+  uniquement le thème, les points et un pseudo — aucun serveur.
+- **🏛️ Motion de censure** : quand une guilde domine la carte (≥ 30 sièges et ≥ 40 % des
+  circonscriptions contrôlées), les oppositions se coalisent 20 tours durant : sur ses
+  terres, le leader doit dominer la SOMME des influences adverses. Défendre sa majorité
+  ou faire tomber celle d'un autre rapporte du capital.
 
 ## Vie privée (invariant n° 1)
 

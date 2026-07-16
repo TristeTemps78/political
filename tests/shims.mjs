@@ -12,7 +12,13 @@ globalThis.localStorage ??= {
 globalThis.document ??= {
   dispatchEvent: () => {},
   getElementById: () => null,
-  createElement: () => ({ classList: { add() {}, remove() {} }, style: {}, set textContent(v) {}, appendChild() {} }),
+  createElement: () => ({
+    classList: { add() {}, remove() {}, contains: () => false },
+    style: {},
+    set textContent(v) {},
+    setAttribute() {},
+    appendChild() {},
+  }),
   body: { appendChild: () => {} },
 };
 

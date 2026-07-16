@@ -3,15 +3,29 @@
 // ne doit JAMAIS être transmis sur le réseau. Cf. docs_architecture/01.
 
 const KEY = 'politiquest2027.v1';
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 function defaults() {
   return {
     version: SCHEMA_VERSION,
     profil: { reponses: {}, axes: null, affinites: [] },
-    joueur: { pseudo: null, guildeId: null, capital: 30, capitalTotal: 30, quizFaits: [], paris: [], consultationsJour: 0, jourConsultations: null },
-    monde: { influence: {}, tick: 0, seed: (Date.now() % 100000) + 7 },
+    joueur: {
+      pseudo: null, guildeId: null, capital: 30, capitalTotal: 30, quizFaits: [], paris: [],
+      consultationsJour: 0, jourConsultations: null,
+      duels: { jour: null, ia: 0, amis: 0 }, // compteurs quotidiens des duels
+    },
+    monde: { influence: {}, tick: 0, seed: (Date.now() % 100000) + 7, censure: null },
   };
+}
+
+// Migrations de schéma : chaque version se transforme vers la suivante.
+function migrer(parsed) {
+  if (parsed.version === 1) {
+    parsed.joueur.duels = { jour: null, ia: 0, amis: 0 };
+    parsed.monde.censure = null;
+    parsed.version = 2;
+  }
+  return parsed.version === SCHEMA_VERSION ? parsed : null;
 }
 
 let state = null;
@@ -21,12 +35,12 @@ export function load() {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.version === SCHEMA_VERSION) {
-        state = parsed;
+      const migre = migrer(JSON.parse(raw));
+      if (migre) {
+        state = migre;
+        save();
         return state;
       }
-      // Migrations futures : version < SCHEMA_VERSION → transformer ici.
     }
   } catch (e) {
     console.warn('Store illisible, réinitialisation.', e);

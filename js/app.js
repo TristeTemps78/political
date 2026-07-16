@@ -8,13 +8,20 @@ import { renderMap } from './map.js';
 import { renderHemicycle } from './hemicycle.js';
 import { renderGraph } from './graph.js';
 import { renderPredictions } from './predictions.js';
+import { renderDuels, setDefiInitial } from './duels.js';
+
+function renderDefis(root) {
+  root.innerHTML = '<div id="zone-duels"></div><div id="zone-predictions"></div>';
+  renderDuels(root.querySelector('#zone-duels'));
+  renderPredictions(root.querySelector('#zone-predictions'));
+}
 
 const ONGLETS = [
   { id: 'quiz', nom: 'Boussole', icone: '🧭', render: renderQuiz },
   { id: 'carte', nom: 'Conquête', icone: '🗺️', render: renderMap },
   { id: 'hemicycle', nom: 'Hémicycle', icone: '🏛️', render: (r) => renderHemicycle(r) },
   { id: 'alliances', nom: 'Alliances', icone: '🕸️', render: renderGraph },
-  { id: 'scrutins', nom: 'Scrutins', icone: '🗳️', render: renderPredictions },
+  { id: 'defis', nom: 'Défis', icone: '🎯', render: renderDefis },
   { id: 'profil', nom: 'Profil', icone: '👤', render: renderProfil },
 ];
 
@@ -97,7 +104,15 @@ function init() {
   load();
   renderStatus();
   renderNav();
-  afficher('quiz');
+  // Un défi reçu par lien (?defi=…) ouvre directement l'onglet Défis.
+  const codeDefi = new URLSearchParams(location.search).get('defi');
+  if (codeDefi) {
+    setDefiInitial(codeDefi);
+    history.replaceState(null, '', location.pathname); // ne pas garder le code dans l'URL
+    afficher('defis');
+  } else {
+    afficher('quiz');
+  }
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }

@@ -1,7 +1,7 @@
 // Service worker : cache-first du shell applicatif (PWA hors ligne).
 // Ne met JAMAIS en cache autre chose que les fichiers statiques du shell.
 
-const CACHE = 'politiquest-v1';
+const CACHE = 'politiquest-v2';
 const SHELL = [
   './',
   './index.html',
@@ -18,6 +18,7 @@ const SHELL = [
   './js/hemicycle.js',
   './js/graph.js',
   './js/predictions.js',
+  './js/duels.js',
 ];
 
 self.addEventListener('install', (e) => {

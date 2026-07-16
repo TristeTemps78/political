@@ -108,3 +108,37 @@
   les toasts en cours de fondu avant chaque axe.run.
 - Résolution ESM dans tools/ : résoudre les dépendances depuis process.cwd() (createRequire)
   pour que le script vive dans le dépôt sans node_modules.
+
+## 2026-07-16 — Session rétention (3 nouvelles mécaniques)
+
+### Livré (design détaillé dans 03_game_loop.md, section « moteurs de rétention »)
+- **Partielles éclair** : `partiellesDuJour()` dans js/guilds.js — tirage seedé par la
+  date ISO, donc identique pour tous les joueurs SANS serveur. Influence ×2 via le retour
+  `{gain}` d'`investir()`.
+- **Duels** : js/duels.js. L'allocation canonique d'une famille est un softmax déterministe
+  sur l'utilité (vecteur famille · effets d'option). Les défis entre amis sont des liens
+  auto-porteurs (base64url) — le décodage REJETTE tout code dont la somme ≠ budget
+  (anti-triche). L'URL ?defi=… est consommée puis retirée par history.replaceState.
+- **Motion de censure** : état `monde.censure`, règle dans `controleur(infl, censureCible)` —
+  la cible doit dominer la somme des oppositions. Cycle de vie complet dans `tickIA`
+  (déclenchement, ciblage IA des marges fragiles, résolution, cooldown).
+- Onglet « Scrutins » fusionné dans « Défis » (duels + prédictions) pour rester à 6 onglets.
+- SCHEMA_VERSION 2 (champs joueur.duels, monde.censure) avec migration v1→v2 testée.
+
+### Validations
+- 25/25 tests (nouveaux : déterminisme des partielles, cohérence idéologique des
+  allocations canoniques, aller-retour + anti-triche des codes de défi, règle de censure,
+  cycle de vie complet d'une motion, migration de schéma).
+- Équilibrage re-simulé : 1er contrôle toujours 5 investissements ; plafond solo 32,9
+  en moyenne (max 40) — la censure rabote légèrement la moyenne, voulu.
+- Bout en bout navigateur : défi créé sur un profil, résolu sur un second via l'URL réelle ;
+  motion déclenchée et affichée. Audit a11y : 0 violation, onglet Défis inclus.
+
+### Pièges
+- Les doublures Node (tests/shims.mjs) doivent suivre les usages du DOM : l'ajout de
+  setAttribute/classList.contains au stub createElement a été nécessaire quand toast()
+  a commencé à être appelé depuis tickIA (censure).
+- Le test « budget IA par tick » doit tolérer un intervalle [base, base×2] : les points
+  placés sur des partielles comptent double.
+- sw.js : penser à incrémenter le nom du cache (politiquest-v2) à chaque ajout de fichier
+  au shell, sinon les anciens clients ne voient jamais les nouveaux modules.

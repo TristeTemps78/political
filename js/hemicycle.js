@@ -4,7 +4,7 @@
 
 import { CIRCOS, FAMILLES, MAJORITE_ABSOLUE } from './data.js';
 import { load } from './store.js';
-import { controleur, comptageSieges } from './guilds.js';
+import { controleur, censureActive } from './guilds.js';
 import { adapter } from './adapter.js';
 
 const NEUTRE = '#9aa3af';
@@ -34,8 +34,9 @@ export function renderHemicycle(root, mode = 'virtuel') {
 
 function couleursVirtuelles() {
   const s = load();
+  const cible = censureActive(s)?.cible ?? null;
   return CIRCOS.map((c) => {
-    const g = controleur(s.monde.influence[c.id]);
+    const g = controleur(s.monde.influence[c.id], cible);
     return { couleur: g ? FAMILLES.find((f) => f.id === g).couleur : NEUTRE, groupe: g, titre: c.nom };
   });
 }

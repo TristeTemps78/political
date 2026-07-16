@@ -54,6 +54,9 @@ test('tickIA : déterministe à seed égal, budget rubber-band borné', () => {
   tickIA();
   assert.equal(JSON.stringify(load().monde.influence), apres1, 'même seed → même monde');
 
-  // 6 guildes IA (la guilde du joueur ne joue pas), budget de base par tick.
-  assert.equal(total1, 6 * ECONOMIE.IA_BUDGET_TICK, 'budget IA de base sans avance du joueur');
+  // 6 guildes IA (la guilde du joueur ne joue pas), budget de base par tick —
+  // chaque point placé sur une partielle du jour vaut PARTIELLE_MULT.
+  const base = 6 * ECONOMIE.IA_BUDGET_TICK;
+  assert.ok(total1 >= base && total1 <= base * ECONOMIE.PARTIELLE_MULT,
+    `total ${total1} attendu entre ${base} et ${base * ECONOMIE.PARTIELLE_MULT}`);
 });

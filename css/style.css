@@ -170,6 +170,16 @@ header h1 .an { color: var(--accent); }
 .cell:hover, .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .cell.contestee { background: repeating-linear-gradient(45deg, var(--bord), var(--bord) 2px, var(--bg) 2px, var(--bg) 4px); }
 .cell.controlee { border-color: transparent; }
+.cell.partielle { box-shadow: 0 0 0 2px #d4a017; animation: pulse-partielle 1.6s ease-in-out infinite; }
+@keyframes pulse-partielle {
+  0%, 100% { box-shadow: 0 0 0 2px #d4a017; }
+  50% { box-shadow: 0 0 0 3px #d4a01766; }
+}
+.partielles-bandeau {
+  background: color-mix(in srgb, #d4a017 14%, var(--panel));
+  border: 1px solid color-mix(in srgb, #d4a017 45%, var(--bord));
+  border-radius: 0.6rem; padding: 0.45rem 0.7rem; font-size: 0.85rem;
+}
 
 #hemicycle-svg svg, #graph-svg svg { width: 100%; height: auto; }
 .hemicycle-total { fill: var(--texte-2); font-size: 1.6rem; font-weight: 700; }

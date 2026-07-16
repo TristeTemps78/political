@@ -35,9 +35,32 @@ Chaque strate correspond à un pilier du cahier des charges :
 | Investir 1 point d'influence | **−10** | Ratio réglé pour qu'un joueur assidu contrôle ~5-15 circos ; 289 exige la coopération de guilde (multijoueur = nécessité structurelle, pas gadget). |
 | Mise minimale / maximale d'un pari | 5 / 50 | Borne le risque de ruine et l'exploit de martingale. |
 
+| Duel « Pensez comme l'adversaire » (similarité ≥ 0,8 / ≥ 0,6) | **+20 / +8** (max 3/jour) | Récompense l'empathie politique (effet Protée) ; gratuit à jouer — l'échec n'est pas puni, c'est un entraînement. |
+| Défi entre amis (mise fixe 10, gain 20 si prédiction exacte) | **net +10 / −10** (max 5/jour) | La compétition sociale porte sur la COMPRÉHENSION de l'autre, pas sur la vitesse. Plafonné contre le farm à deux comptes. |
+| Élection partielle (quotidienne, 4 circos tirées par date) | **influence ×2** | Rendez-vous quotidien non punitif : rater une partielle ne retire rien. Tirage déterministe par date → identique pour tous sans serveur. |
+| Récompenses de censure (défense réussie / coalition victorieuse) | **+30 / +20** | Donne un enjeu au endgame dans les deux camps. |
+
 Aucun achat en monnaie réelle, aucun gain lié au temps de présence : le capital mesure
 exclusivement l'effort d'apprentissage. (Anti-dark-patterns : pas de streak punitif,
-pas de FOMO minuté.)
+pas de FOMO minuté — les partielles créent un rendez-vous, jamais une pénalité d'absence.)
+
+## Les trois moteurs de rétention (ajoutés le 2026-07-16)
+
+1. **Élections partielles éclair** (le rendez-vous) : chaque jour, 4 circonscriptions
+   tirées déterministement par la date passent en « partielle » — influence doublée,
+   bandeau sur la carte, cellules pulsantes. Les IA les disputent (50 % des guildes y
+   consacrent leur premier point), garantissant des batailles quotidiennes visibles.
+2. **Duels de débat** (l'autre joueur) : entraînement contre l'allocation canonique d'une
+   famille (softmax déterministe sur utilité = vecteur famille × effets des options,
+   `js/duels.js`) et défi entre amis par lien auto-porteur (base64url du thème + arbitrages
+   + pseudo — AUCUN serveur, le code EST le message ; validation stricte anti-triche :
+   somme = budget). Canal viral de l'application.
+3. **Motion de censure** (le drame de fin de partie) : quand un leader contrôle ≥ 30 sièges
+   ET ≥ 40 % des circonscriptions contrôlées, les oppositions se coalisent pendant 20 tours —
+   sur les circonscriptions du leader, sa guilde doit dominer la SOMME des influences
+   adverses. Les IA attaquent ses marges les plus fragiles ; la cible défend. Résout le
+   problème du runaway leader et enseigne la mécanique réelle des coalitions d'opposition.
+   Cooldown de 40 tours entre deux motions.
 
 ## Guildes rivales simulées (avant le multijoueur réel)
 

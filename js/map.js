@@ -5,7 +5,7 @@
 
 import { DEPARTEMENTS, CIRCOS, FAMILLES, MAJORITE_ABSOLUE } from './data.js';
 import { load } from './store.js';
-import { ECONOMIE, investir, controleur, comptageSieges, majoriteAtteinte, toast, prefersReducedMotion } from './guilds.js';
+import { ECONOMIE, investir, controleur, comptageSieges, majoriteAtteinte, toast, prefersReducedMotion, partiellesDuJour, censureActive } from './guilds.js';
 
 const REGIONS_ORDRE = [
   'Île-de-France', 'Hauts-de-France', 'Normandie', 'Grand Est', 'Bretagne',
@@ -16,15 +16,16 @@ const REGIONS_ORDRE = [
 
 let rovingIdx = 0; // cellule porteuse du tabindex 0 (persiste entre re-rendus)
 
-function etatCirco(s, circo) {
+function etatCirco(s, circo, cible, partielles) {
   const infl = s.monde.influence[circo.id];
-  const ctrl = controleur(infl);
-  if (ctrl) return `contrôlée par ${FAMILLES.find((f) => f.id === ctrl).nom}`;
+  const ctrl = controleur(infl, cible);
+  const suffixe = partielles.includes(circo.id) ? ' — élection partielle en cours, influence doublée' : '';
+  if (ctrl) return `contrôlée par ${FAMILLES.find((f) => f.id === ctrl).nom}${suffixe}`;
   if (infl) {
     const [tete, pts] = Object.entries(infl).sort((a, b) => b[1] - a[1])[0];
-    return `contestée, ${FAMILLES.find((f) => f.id === tete).nom} en tête avec ${pts} point${pts > 1 ? 's' : ''}`;
+    return `contestée, ${FAMILLES.find((f) => f.id === tete).nom} en tête avec ${pts} point${pts > 1 ? 's' : ''}${suffixe}`;
   }
-  return 'territoire vierge';
+  return `territoire vierge${suffixe}`;
 }
 
 export function renderMap(root) {
@@ -32,6 +33,9 @@ export function renderMap(root) {
   const sieges = comptageSieges(s);
   const guilde = s.joueur.guildeId ? FAMILLES.find((f) => f.id === s.joueur.guildeId) : null;
   const vainqueur = majoriteAtteinte(s);
+  const censure = censureActive(s);
+  const cible = censure?.cible ?? null;
+  const partielles = partiellesDuJour();
 
   root.innerHTML = `
     <div class="panel carte-entete">
@@ -44,6 +48,10 @@ export function renderMap(root) {
         circonscription, ↑/↓ pour changer de département, Entrée pour ouvrir.</p>
         ${guilde ? `<p>Votre guilde : <span class="pastille" style="background:${guilde.couleur}"></span> <strong>${guilde.nom}</strong> — ${sieges[guilde.id] || 0} siège(s)</p>`
           : '<p class="alerte">Rejoignez une guilde dans l’onglet Profil pour investir.</p>'}
+        ${censure ? `<p class="alerte">🏛️ <strong>Motion de censure contre ${FAMILLES.find((f) => f.id === cible).nom}</strong> —
+          la coalition additionne ses influences contre elle sur ses circonscriptions, encore ${censure.restant} tour${censure.restant > 1 ? 's' : ''}.</p>` : ''}
+        <p class="partielles-bandeau">🔥 <strong>Partielles du jour</strong> (influence ×${ECONOMIE.PARTIELLE_MULT}) :
+          ${partielles.map((id) => CIRCOS.find((c) => c.id === id).nom).join(' · ')}</p>
         ${vainqueur ? `<p class="victoire">🏆 <strong>${FAMILLES.find((f) => f.id === vainqueur).nom}</strong> a atteint la majorité absolue !</p>` : ''}
       </div>
       <div class="legende" aria-label="Sièges contrôlés par guilde">${FAMILLES.map((f) =>
@@ -80,14 +88,15 @@ export function renderMap(root) {
         cell.className = 'cell';
         cell.dataset.idx = String(cellules.length);
         cell.dataset.dept = d.code;
-        cell.setAttribute('aria-label', `${circo.nom}, ${etatCirco(s, circo)}`);
-        const ctrl = controleur(s.monde.influence[circo.id]);
+        cell.setAttribute('aria-label', `${circo.nom}, ${etatCirco(s, circo, cible, partielles)}`);
+        const ctrl = controleur(s.monde.influence[circo.id], cible);
         if (ctrl) {
           cell.style.background = FAMILLES.find((f) => f.id === ctrl).couleur;
           cell.classList.add('controlee');
         } else if (s.monde.influence[circo.id]) {
           cell.classList.add('contestee');
         }
+        if (partielles.includes(circo.id)) cell.classList.add('partielle');
         cell.addEventListener('click', () => {
           rovingIdx = Number(cell.dataset.idx);
           majTabindex(cellules);
@@ -153,12 +162,15 @@ function renderCircoDetail(root, circoId, { focusHeading = false, focusInvestir 
   const s = load();
   const circo = CIRCOS.find((c) => c.id === circoId);
   const infl = s.monde.influence[circoId] || {};
-  const ctrl = controleur(infl);
+  const cible = censureActive(s)?.cible ?? null;
+  const ctrl = controleur(infl, cible);
+  const enPartielle = partiellesDuJour().includes(circoId);
   const lignes = Object.entries(infl).sort((a, b) => b[1] - a[1]);
   const detail = root.querySelector('#circo-detail');
   detail.innerHTML = `
     <div class="panel">
       <h3 id="titre-circo" tabindex="-1">${circo.nom}</h3>
+      ${enPartielle ? `<p class="partielles-bandeau">🔥 Élection partielle en cours aujourd’hui : chaque investissement vaut ${ECONOMIE.PARTIELLE_MULT} points d’influence.</p>` : ''}
       <p>${ctrl
         ? `Contrôlée par <strong>${FAMILLES.find((f) => f.id === ctrl).nom}</strong>.`
         : lignes.length ? 'Contestée — aucune guilde ne domine encore.' : 'Territoire vierge : aucune influence.'}</p>
@@ -167,7 +179,7 @@ function renderCircoDetail(root, circoId, { focusHeading = false, focusInvestir 
         return `<div class="affinite-row"><span class="pastille" style="background:${f.couleur}"></span>
           <span class="affinite-nom">${f.nom}</span><span class="affinite-score">${v} pt(s)</span></div>`;
       }).join('')}
-      <button class="btn-primaire" id="btn-investir">Investir ${ECONOMIE.COUT_INFLUENCE} capital (+1 influence)</button>
+      <button class="btn-primaire" id="btn-investir">Investir ${ECONOMIE.COUT_INFLUENCE} capital (+${enPartielle ? ECONOMIE.PARTIELLE_MULT : 1} influence)</button>
       <p class="hint">Chaque investissement déclenche un tour des guildes rivales : le scrutin uninominal
       récompense la concentration locale, pas la dispersion — c’est toute la logique du maillage territorial.</p>
     </div>`;
