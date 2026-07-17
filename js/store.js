@@ -3,7 +3,7 @@
 // ne doit JAMAIS être transmis sur le réseau. Cf. docs_architecture/01.
 
 const KEY = 'politiquest2027.v1';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 function defaults() {
   return {
@@ -14,7 +14,10 @@ function defaults() {
       consultationsJour: 0, jourConsultations: null,
       duels: { jour: null, ia: 0, amis: 0 }, // compteurs quotidiens des duels
     },
-    monde: { influence: {}, tick: 0, seed: (Date.now() % 100000) + 7, censure: null },
+    monde: {
+      influence: {}, tick: 0, seed: (Date.now() % 100000) + 7, censure: null,
+      gouverner: null, // mandat du mode Gouverner en cours (js/gouverner.js), null = aucune partie
+    },
   };
 }
 
@@ -24,6 +27,10 @@ function migrer(parsed) {
     parsed.joueur.duels = { jour: null, ia: 0, amis: 0 };
     parsed.monde.censure = null;
     parsed.version = 2;
+  }
+  if (parsed.version === 2) {
+    parsed.monde.gouverner = null; // aucune partie « Gouverner » en cours par défaut
+    parsed.version = 3;
   }
   return parsed.version === SCHEMA_VERSION ? parsed : null;
 }

@@ -118,3 +118,29 @@ test('migration de schéma v1 → v2', () => {
   assert.equal(s.monde.influence['075-01'].localiste, 3);
   eraseAll();
 });
+
+test('migration de schéma v2 → v3', () => {
+  const v2 = {
+    version: 2,
+    profil: { reponses: {}, axes: null, affinites: [] },
+    joueur: {
+      pseudo: 'Test', guildeId: 'localiste', capital: 99, capitalTotal: 150, quizFaits: ['climat'], paris: [],
+      consultationsJour: 2, jourConsultations: '2027-06-01',
+      duels: { jour: '2027-06-01', ia: 1, amis: 0 },
+    },
+    monde: { influence: { '075-01': { localiste: 5 } }, tick: 12, seed: 42, censure: null },
+  };
+  eraseAll();
+  localStorage.setItem('politiquest2027.v1', JSON.stringify(v2));
+  const s = load();
+  assert.equal(s.version, SCHEMA_VERSION);
+  // Les données v2 survivent intégralement.
+  assert.equal(s.joueur.capital, 99);
+  assert.equal(s.joueur.pseudo, 'Test');
+  assert.deepEqual(s.joueur.duels, { jour: '2027-06-01', ia: 1, amis: 0 });
+  assert.equal(s.monde.tick, 12);
+  assert.equal(s.monde.influence['075-01'].localiste, 5);
+  // Le nouveau champ v3 est créé, aucune partie en cours par défaut.
+  assert.equal(s.monde.gouverner, null);
+  eraseAll();
+});
