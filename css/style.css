@@ -11,6 +11,7 @@
   --edge: #8892a0;
   --danger: #c0392b;
   --ok: #27ae60;
+  --carte-neutre: #e3e7ee;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -22,6 +23,7 @@
     --accent-texte: #10131a;
     --bord: #2a3140;
     --edge: #57617355;
+    --carte-neutre: #2e3646;
   }
 }
 
@@ -180,6 +182,22 @@ header h1 .an { color: var(--accent); }
   border: 1px solid color-mix(in srgb, #d4a017 45%, var(--bord));
   border-radius: 0.6rem; padding: 0.45rem 0.7rem; font-size: 0.85rem;
 }
+
+.carte-france svg { width: 100%; height: auto; display: block; }
+.carte-dept { stroke: var(--bg); stroke-width: 0.8; cursor: pointer; }
+.carte-dept:hover { stroke: var(--texte); stroke-width: 1.4; }
+/* outline ne suit pas la forme d'un <path> : le focus est porté par le trait */
+.carte-dept:focus-visible { outline: none; stroke: var(--accent); stroke-width: 2.5; }
+.carte-dept.selectionnee { stroke: var(--accent); stroke-width: 2; }
+.carte-encart { fill: none; stroke: var(--bord); stroke-dasharray: 4 3; }
+.carte-encart-code { fill: var(--texte-2); font-size: 13px; }
+.carte-tuiles { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.carte-tuile {
+  border: 1px solid var(--bord); border-radius: 0.5rem; padding: 0.4rem 0.65rem;
+  font-size: 0.82rem; color: var(--texte); cursor: pointer;
+}
+.carte-tuile:hover { border-color: var(--texte); }
+.carte-tuile.selectionnee { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
 #hemicycle-svg svg, #graph-svg svg { width: 100%; height: auto; }
 .hemicycle-total { fill: var(--texte-2); font-size: 1.6rem; font-weight: 700; }
