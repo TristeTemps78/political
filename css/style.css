@@ -212,6 +212,50 @@ header h1 .an { color: var(--accent); }
   background: var(--bg); color: var(--texte);
 }
 
+/* --- Mode Gouverner (E5) --------------------------------------------------- */
+.gvn-heritage { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: var(--texte-2); margin: 0.8rem 0; }
+.gvn-stats .card { align-items: center; text-align: center; }
+.gvn-stats .theme-titre { font-size: 1.4rem; }
+
+.gvn-jauges { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.6rem; }
+.jauge { flex: 1 1 12rem; display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; align-items: center; }
+.jauge-label { font-size: 0.8rem; color: var(--texte-2); }
+.jauge-barre { height: 0.5rem; background: var(--bord); border-radius: 1rem; overflow: hidden; }
+.jauge-remplissage { display: block; height: 100%; border-radius: 1rem; }
+.jauge-remplissage.pos { background: var(--ok); }
+.jauge-remplissage.neg { background: var(--danger); }
+.jauge-valeur { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.85rem; }
+
+.gvn-personas { display: grid; gap: 0.5rem; }
+.gvn-persona { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; font-size: 0.85rem; border-bottom: 1px dashed var(--bord); padding-bottom: 0.4rem; }
+.gvn-persona-nom { font-weight: 700; }
+.gvn-persona-humeur { color: var(--texte-2); }
+.gvn-persona-recit { font-style: italic; flex-basis: 100%; color: var(--texte-2); }
+
+.gvn-journal { margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--texte-2); max-height: 16rem; overflow-y: auto; }
+.gvn-journal li { margin: 0.3rem 0; }
+
+.gvn-reponses { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.gvn-reformes { max-height: 18rem; overflow-y: auto; margin: 0.6rem 0; border: 1px solid var(--bord); border-radius: 0.6rem; }
+.gvn-reforme-item { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.5rem 0.7rem; border-bottom: 1px dashed var(--bord); font-size: 0.85rem; flex-wrap: wrap; }
+.gvn-reforme-item:last-child { border-bottom: none; }
+.gvn-reforme-actions { display: flex; gap: 0.4rem; }
+.btn-mini2 { padding: 0.3rem 0.6rem; border: 1px solid var(--bord); border-radius: 0.5rem; background: var(--panel); color: var(--texte); font-size: 0.78rem; cursor: pointer; }
+.btn-mini2:hover { border-color: var(--accent); color: var(--accent); }
+
+.gvn-vote-table { display: grid; gap: 0.4rem; margin: 0.6rem 0; }
+.gvn-vote-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.85rem; }
+.gvn-vote-position { font-weight: 700; min-width: 5.5rem; }
+.gvn-vote-pour { color: var(--ok); }
+.gvn-vote-contre { color: var(--danger); }
+
+.gvn-fiche-dialog {
+  max-width: 34rem; width: 90vw; border: 1px solid var(--bord); border-radius: 0.8rem;
+  padding: 1.2rem; background: var(--panel); color: var(--texte);
+}
+.gvn-fiche-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+.gvn-fiche-dialog ul { padding-left: 1.2rem; font-size: 0.88rem; color: var(--texte-2); }
+
 #toast {
   position: fixed; bottom: 5rem; left: 50%; transform: translateX(-50%) translateY(1rem);
   background: var(--texte); color: var(--bg); padding: 0.6rem 1.1rem; border-radius: 2rem;

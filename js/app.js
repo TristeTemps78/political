@@ -9,6 +9,7 @@ import { renderHemicycle } from './hemicycle.js';
 import { renderGraph } from './graph.js';
 import { renderPredictions } from './predictions.js';
 import { renderDuels, setDefiInitial } from './duels.js';
+import { renderGouverner } from './gouverner-ui.js';
 
 function renderDefis(root) {
   root.innerHTML = '<div id="zone-duels"></div><div id="zone-predictions"></div>';
@@ -16,11 +17,20 @@ function renderDefis(root) {
   renderPredictions(root.querySelector('#zone-predictions'));
 }
 
+// Hémicycle + Alliances fusionnés en un seul onglet « Assemblée » (deux
+// sections), même patron que l'onglet Défis (duels + prédictions) — pour
+// rester à 6 onglets max malgré l'ajout de « Gouverner » (docs_architecture/01).
+function renderAssemblee(root) {
+  root.innerHTML = '<div id="zone-hemicycle"></div><div id="zone-alliances"></div>';
+  renderHemicycle(root.querySelector('#zone-hemicycle'));
+  renderGraph(root.querySelector('#zone-alliances'));
+}
+
 const ONGLETS = [
+  { id: 'gouverner', nom: 'Gouverner', icone: '🇫🇷', render: renderGouverner },
   { id: 'quiz', nom: 'Boussole', icone: '🧭', render: renderQuiz },
   { id: 'carte', nom: 'Conquête', icone: '🗺️', render: renderMap },
-  { id: 'hemicycle', nom: 'Hémicycle', icone: '🏛️', render: (r) => renderHemicycle(r) },
-  { id: 'alliances', nom: 'Alliances', icone: '🕸️', render: renderGraph },
+  { id: 'assemblee', nom: 'Assemblée', icone: '🏛️', render: renderAssemblee },
   { id: 'defis', nom: 'Défis', icone: '🎯', render: renderDefis },
   { id: 'profil', nom: 'Profil', icone: '👤', render: renderProfil },
 ];
@@ -110,6 +120,9 @@ function init() {
     setDefiInitial(codeDefi);
     history.replaceState(null, '', location.pathname); // ne pas garder le code dans l'URL
     afficher('defis');
+  } else if (load().monde.gouverner) {
+    // Un mandat « Gouverner » en cours redevient l'écran d'accueil naturel.
+    afficher('gouverner');
   } else {
     afficher('quiz');
   }
