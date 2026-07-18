@@ -47,6 +47,24 @@ function choisir(options, noter) {
   return meilleure;
 }
 
+// Sélectionne, parmi les `n` meilleures options selon `noter`, celle d'indice
+// `index % n` (déterministe). Depuis l'élection présidentielle 2032
+// (election2032, js/gouverner.js), le verdict est géographique — département
+// par département, pondéré par circonscriptions — et non plus un simple
+// score national moyen. Une stratégie qui rejoue en boucle LE même texte le
+// mieux aligné sature une minorité géographique jusqu'à ±100 d'humeur (la
+// « ligne populaire » plaît en moyenne mais écrase toujours les mêmes
+// personas), ce qui peut faire perdre le pays malgré une popularité
+// nationale confortable. Une stratégie cohérente réaliste traite plusieurs
+// dossiers alignés au fil du mandat plutôt qu'un seul en boucle : cette
+// rotation reste 100 % déterministe (indexée sur le tour), donc reproductible.
+function choisirParmiLesMeilleurs(options, noter, n, index) {
+  const triees = [...options].sort((a, b) => noter(b) - noter(a));
+  return triees[index % Math.min(n, triees.length)];
+}
+
+const ROTATION_COHERENTE = 5; // cf. commentaire de choisirParmiLesMeilleurs ci-dessus
+
 // Cohérente : maximise l'alignement avec la ligne choisie, pénalise modérément
 // les options déficitaires (un budget géré n'est pas un budget ignoré).
 function noterCoherent(opt, vecteur) {
@@ -62,10 +80,10 @@ function noterIncoherent(opt, vecteur, minimiser) {
   return align + depense * 0.6;
 }
 
-function decisionEvenement(g, vecteur, noter, coutChoc) {
+function decisionEvenement(g, vecteur, noter, coutChoc, rotation = 1) {
   const evt = EVENEMENTS.find((e) => e.id === g.evenementEnCours?.id);
   if (!evt) return null;
-  const reponse = choisir(evt.reponses, (opt) => noter(opt, vecteur));
+  const reponse = choisirParmiLesMeilleurs(evt.reponses, (opt) => noter(opt, vecteur), rotation, g.tour);
   return {
     effets: reponse.effets,
     cout: reponse.cout,
@@ -75,10 +93,9 @@ function decisionEvenement(g, vecteur, noter, coutChoc) {
 }
 
 function decisionCoherente(g, vecteur) {
-  const noter = (opt) => noterCoherent(opt, vecteur);
-  const parEvenement = decisionEvenement(g, vecteur, noterCoherent, -8);
+  const parEvenement = decisionEvenement(g, vecteur, noterCoherent, -8, ROTATION_COHERENTE);
   if (parEvenement) return parEvenement;
-  const reforme = choisir(REFORMES, noter);
+  const reforme = choisirParmiLesMeilleurs(REFORMES, (opt) => noterCoherent(opt, vecteur), ROTATION_COHERENTE, g.tour);
   return { effets: reforme.effets, cout: reforme.cout, libelle: reforme.titre };
 }
 
@@ -131,11 +148,26 @@ console.log(`Simulation Gouverner sur ${N} mandats par stratégie (famille incar
 const coherente = simuler('coherente');
 const incoherente = simuler('incoherente');
 
+// Répartition des fins (E6 : reelu/battu/demission — 'reelu' n'est plus
+// systématique depuis election2032, verdict département par département).
+function repartitionFins(res) {
+  const total = Object.values(res.types).reduce((a, b) => a + b, 0) || 1;
+  return ['reelu', 'battu', 'demission', 'censure', 'inacheve']
+    .filter((t) => res.types[t])
+    .map((t) => `${t} ${res.types[t]}/${total} (${((res.types[t] / total) * 100).toFixed(0)}%)`)
+    .join(', ');
+}
+
+function tauxReelu(res) {
+  const total = Object.values(res.types).reduce((a, b) => a + b, 0) || 1;
+  return ((res.types.reelu || 0) / total) * 100;
+}
+
 function rapport(nom, res) {
   console.log(`Stratégie ${nom} :`);
   console.log(`  popularité finale — moyenne ${moyenne(res.popularites).toFixed(1)}, écart-type ${ecartType(res.popularites).toFixed(1)}, min ${Math.min(...res.popularites)}, max ${Math.max(...res.popularites)}`);
   console.log(`  solde final       — moyenne ${moyenne(res.soldes).toFixed(1)} Md€, min ${Math.min(...res.soldes).toFixed(1)}, max ${Math.max(...res.soldes).toFixed(1)}`);
-  console.log(`  issues            — ${JSON.stringify(res.types)}`);
+  console.log(`  répartition des fins — ${repartitionFins(res)}`);
 }
 
 rapport('cohérente', coherente);
@@ -145,3 +177,8 @@ const ecartPopularite = moyenne(coherente.popularites) - moyenne(incoherente.pop
 const ecartSolde = moyenne(coherente.soldes) - moyenne(incoherente.soldes);
 console.log(`\nÉcart cohérente − incohérente : popularité ${ecartPopularite >= 0 ? '+' : ''}${ecartPopularite.toFixed(1)} pts, solde ${ecartSolde >= 0 ? '+' : ''}${ecartSolde.toFixed(1)} Md€`);
 console.log(`Signe attendu (cohérente > incohérente sur les deux jauges) : ${ecartPopularite > 0 && ecartSolde > 0 ? 'OK ✅' : 'À REGARDER ⚠️ (cibles chiffrées définitives en E7)'}`);
+
+const reeluCoherente = tauxReelu(coherente);
+const reeluIncoherente = tauxReelu(incoherente);
+console.log(`\nTaux de réélection — cohérente ${reeluCoherente.toFixed(0)}%, incohérente ${reeluIncoherente.toFixed(0)}%`);
+console.log(`Signe attendu (cohérente >> incohérente) : ${reeluCoherente > reeluIncoherente ? 'OK ✅' : 'À REGARDER ⚠️ (cibles chiffrées définitives en E7)'}`);

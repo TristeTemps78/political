@@ -22,6 +22,10 @@ export function renderMandat(root, g, alFinDuTour, focaliserEntete = false) {
   const date = dateDuTour(g.tour);
   const guilde = FAMILLES.find((f) => f.id === g.familleId);
 
+  // Une échéance électorale intermédiaire (européennes, sénatoriales,
+  // municipales) vient de se résoudre au tour précédent : bannière + fiche.
+  const echeanceRecente = g.derniereEcheance && g.derniereEcheance.tour === g.tour - 1 ? g.derniereEcheance : null;
+
   root.innerHTML = `
     <div class="panel">
       <h3 id="gvn-titre" tabindex="-1">🇫🇷 Gouverner — ${date.libelle}</h3>
@@ -32,6 +36,12 @@ export function renderMandat(root, g, alFinDuTour, focaliserEntete = false) {
         ${jaugeSolde(g.jauges.solde)}
       </div>
     </div>
+    ${echeanceRecente ? `
+    <div class="panel gvn-echeance" aria-live="polite">
+      <h4>📅 Résultat d’une échéance électorale</h4>
+      <p>${libelleEcheance(echeanceRecente)}</p>
+      <button type="button" class="btn-secondaire" id="gvn-voir-fiche-echeance">📘 En savoir plus</button>
+    </div>` : ''}
     <div class="panel">
       <h4>Carte de France — humeur des territoires</h4>
       <div id="gvn-carte"></div>
@@ -48,9 +58,26 @@ export function renderMandat(root, g, alFinDuTour, focaliserEntete = false) {
     </div>`;
 
   if (focaliserEntete) root.querySelector('#gvn-titre').focus();
+  const btnFicheEcheance = root.querySelector('#gvn-voir-fiche-echeance');
+  if (btnFicheEcheance) btnFicheEcheance.addEventListener('click', () => consulterFiche(echeanceRecente.fiche));
   renderCarte(root, g);
   renderPersonas(root, g);
   renderDecision(root, g, alFinDuTour, !focaliserEntete);
+}
+
+// Libellé lisible du résultat d'une échéance électorale intermédiaire, pour
+// la bannière ci-dessus (réutilisé nulle part ailleurs : un seul écran l'affiche).
+function libelleEcheance(e) {
+  if (e.type === 'europeennes') {
+    return `🇪🇺 Élections européennes 2029 : score du gouvernement ${e.resultat.score} % (participation simulée ${e.resultat.participation} %)${e.resultat.malus ? ' — sanction dans les urnes.' : '.'}`;
+  }
+  if (e.type === 'senatoriales') {
+    return `🏛️ Sénatoriales : le Sénat est désormais ${e.resultat.senatHostile ? 'hostile' : 'favorable'} (popularité ${e.resultat.popularite} % lors du renouvellement).`;
+  }
+  if (e.type === 'municipales') {
+    return `🏘️ Municipales 2031 : ${e.resultat.deptsChocNegatif.length} département(s) sanctionné(s), ${e.resultat.deptsChocPositif.length} récompensé(s) dans leur ancrage local.`;
+  }
+  return '';
 }
 
 function jaugePopularite(valeur) {
@@ -270,21 +297,29 @@ function renderTexteEnCours(el, root, g, alFinDuTour) {
 
 // --- Résolution de la décision du mois -------------------------------------------
 
-// Applique finDeTour, récompense la première lecture d'une fiche (capital gagné
-// par apprentissage, jamais autrement), ré-affiche l'écran adapté (mandat ou fin
-// de mandat) et ouvre la fiche pédagogique le cas échéant.
+// Applique finDeTour, ré-affiche l'écran adapté (mandat ou fin de mandat) et
+// ouvre la fiche pédagogique le cas échéant (récompense de 1re lecture gérée
+// par consulterFiche, cf. plus bas).
 function resoudre(root, g, decision, ficheId, alFinDuTour) {
+  update((s) => { finDeTour(s.monde.gouverner, decision); });
+  alFinDuTour();
+  if (ficheId) consulterFiche(ficheId);
+}
+
+// Ouvre la fiche pédagogique `ficheId`, récompense sa première lecture (capital
+// gagné par apprentissage, jamais autrement) et affiche la boîte de dialogue.
+// Exporté : réutilisé par gouverner-ui.js (fiche du verdict 2032) et par la
+// bannière d'échéance intermédiaire ci-dessus, sans dupliquer cette logique.
+export function consulterFiche(ficheId) {
   let premiereFois = false;
   update((s) => {
-    finDeTour(s.monde.gouverner, decision);
-    if (ficheId && !s.monde.gouverner.fichesVues.includes(ficheId)) {
+    if (!s.monde.gouverner.fichesVues.includes(ficheId)) {
       premiereFois = true;
       s.monde.gouverner.fichesVues.push(ficheId);
       s.joueur.capital += ECONOMIE_GOUVERNER.RECOMP_FICHE;
     }
   });
-  alFinDuTour();
-  if (ficheId) ouvrirFicheDialog(ficheId, premiereFois);
+  ouvrirFicheDialog(ficheId, premiereFois);
 }
 
 function ouvrirFicheDialog(ficheId, gagne) {

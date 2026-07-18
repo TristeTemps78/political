@@ -27,6 +27,28 @@ export function sensibilite(rapport) {
   return SENSIBILITE[rapport] ?? 1.0;
 }
 
+// Taux de PARTICIPATION électorale ∈ [0,1] selon le rapport à la politique du
+// persona — l'abstention devient une mécanique visible (élections
+// intermédiaires, verdict 2032, cf. js/gouverner.js) : un persona mécontent ET
+// participant pèse contre le gouvernement ; un persona content mais
+// abstentionniste ne le sauve pas. Ordres de grandeur documentés, chiffres
+// ronds (exercice pédagogique, aucune source statistique précise invoquée) :
+const PARTICIPATION = {
+  conviction: 0.88,    // vote de conviction : l'électorat le plus fidèle, se déplace presque toujours (Martine, retraités)
+  engagement: 0.85,     // suit l'actualité de près, très rarement absent (Chantal, élue locale)
+  utile: 0.75,            // pragmatique : se mobilise surtout quand l'enjeu lui semble décisif (Thomas)
+  fiscalite: 0.7,          // défend directement ses intérêts concrets, vote pour les protéger (Sylvie)
+  protestataire: 0.65,      // la colère mobilise, mais moins durablement qu'une conviction stable (Bruno)
+  intermittent: 0.6,         // vote « par à-coups » : fort à la présidentielle, faible ailleurs — moyenne prudente (Nadia)
+  defiance: 0.45,              // la méfiance envers les institutions nourrit aussi le désengagement électoral (Jean-Marc, Karim)
+  eloignement: 0.4,             // sentiment que la décision se joue ailleurs, loin de son quotidien (Moetai, outre-mer)
+  abstention: 0.3,                // rapport structurellement abstentionniste, notamment aux scrutins intermédiaires (Léa, 18-24 ans)
+};
+
+export function participation(rapport) {
+  return PARTICIPATION[rapport] ?? 0.6;
+}
+
 export const PERSONAS = [
   { id: 'nadia', nom: 'Nadia', age: 34, emoji: '🏥', dept: '059', segment: 'santé hospitalière',
     vecteur: { eco: 0.5, societe: 0.3, ecologie: 0.2, europe: 0.1 }, rapport: 'intermittent',

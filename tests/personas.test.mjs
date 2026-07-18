@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PERSONAS, AXES_GOUVERNER, poidsSegments, reagirPersona, tirerRecit, sensibilite } from '../js/personas.js';
+import { PERSONAS, AXES_GOUVERNER, poidsSegments, reagirPersona, tirerRecit, sensibilite, participation } from '../js/personas.js';
 import { DEPARTEMENTS, mulberry32 } from '../js/data.js';
 
 test('10 personas exactement, schéma complet et fictifs', () => {
@@ -27,6 +27,26 @@ test('10 personas exactement, schéma complet et fictifs', () => {
 test('sensibilite : toujours positive, valeur par défaut pour un rapport inconnu', () => {
   for (const p of PERSONAS) assert.ok(sensibilite(p.rapport) > 0);
   assert.equal(sensibilite('inconnu-xyz'), 1.0);
+});
+
+test('participation : bornée [0,1], monotone selon le rapport à la politique (abstention devient visible)', () => {
+  for (const p of PERSONAS) {
+    const t = participation(p.rapport);
+    assert.ok(t >= 0 && t <= 1, `${p.rapport} : taux ${t} hors [0,1]`);
+  }
+  assert.equal(participation('inconnu-xyz'), 0.6, 'valeur par défaut raisonnable pour un rapport non répertorié');
+  // Ordre documenté (cf. js/personas.js) : conviction/engagement les plus
+  // mobilisés, abstention/éloignement les moins mobilisés — un persona
+  // mécontent ET participant doit pouvoir peser contre le gouvernement,
+  // un persona content mais abstentionniste ne doit pas suffire à sauver le
+  // score (cf. election2032, js/gouverner.js).
+  const ordre = ['conviction', 'engagement', 'utile', 'fiscalite', 'protestataire', 'intermittent', 'defiance', 'eloignement', 'abstention'];
+  for (let i = 0; i < ordre.length - 1; i++) {
+    assert.ok(
+      participation(ordre[i]) >= participation(ordre[i + 1]),
+      `participation(${ordre[i]}) devrait être ≥ participation(${ordre[i + 1]})`
+    );
+  }
 });
 
 test('poidsSegments : somme à 1, le persona du département pèse le plus localement', () => {

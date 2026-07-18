@@ -5,13 +5,14 @@
 // finDeTour()/save(). Le détail du tour (carte, décision du mois, personas)
 // vit dans js/gouverner-ui-mandat.js (découpe en 2 fichiers, cf. plan E5).
 
-import { FAMILLES } from './data.js';
+import { FAMILLES, DEPARTEMENTS } from './data.js';
 import { load, update } from './store.js';
-import { creerPartie } from './gouverner.js';
+import { creerPartie, participationDepartement } from './gouverner.js';
 import { composerAssemblee } from './assemblee.js';
 import { comptageSieges } from './guilds.js';
 import { dateDuTour } from './mandat.js';
-import { renderMandat } from './gouverner-ui-mandat.js';
+import { renderMandat, consulterFiche } from './gouverner-ui-mandat.js';
+import { renderCarteFrance } from './carte-france.js';
 
 // Borne du dérivé de seed au lancement : reproductible dans la partie une
 // fois créée (stocké dans g.seed), mais différent d'une partie à l'autre.
@@ -106,6 +107,7 @@ const LIBELLES_FIN = {
 function renderFinMandat(root, g) {
   const info = LIBELLES_FIN[g.fin.type] || { titre: 'Fin de mandat', texte: '' };
   const date = dateDuTour(Math.min(g.fin.tour, 59));
+  const verdict = g.fin.verdict; // présent uniquement pour reelu/battu (issu d'election2032)
   root.innerHTML = `
     <div class="panel">
       <h3 id="gvn-titre" tabindex="-1">${info.titre}</h3>
@@ -116,11 +118,37 @@ function renderFinMandat(root, g) {
         <div class="card"><span class="theme-titre">${g.dissolutionFaite ? 'Oui' : 'Non'}</span><span class="theme-etat">dissolution prononcée</span></div>
         <div class="card"><span class="theme-titre">${g.referendumsFaits}</span><span class="theme-etat">référendum(s) organisé(s)</span></div>
       </div>
+      ${verdict ? `
+      <h4>Verdict des urnes — présidentielle 2032</h4>
+      <p><strong>${verdict.national} %</strong> pour votre majorité à l’échelle nationale (pondéré par circonscriptions),
+      participation ${verdict.participation} %.</p>
+      <div id="gvn-carte-verdict"></div>
+      <button type="button" class="btn-secondaire" id="gvn-voir-fiche-presidentielle">📘 Comment se déroule une présidentielle ?</button>
+      ` : ''}
       <h4>Résumé du mandat</h4>
       <ul class="gvn-journal">${[...g.journal].reverse().map((j) => `<li>${j}</li>`).join('') || '<li>Aucun événement notable.</li>'}</ul>
       <button type="button" class="btn-primaire" id="gvn-nouvelle-partie">Nouvelle partie</button>
     </div>`;
   root.querySelector('#gvn-titre').focus();
+  if (verdict) {
+    renderCarteFrance(root.querySelector('#gvn-carte-verdict'), {
+      // Ramène le pourcentage du gouvernement (0-100, pivot à 50) sur l'échelle
+      // divergente -100..100 de renderCarteFrance (même transformation que la
+      // fonction `remplissage` du composant : (valeur-50)×2, bornée).
+      valeur: (code) => {
+        const pct = verdict.parDept[code];
+        return pct === undefined ? null : Math.max(-100, Math.min(100, (pct - 50) * 2));
+      },
+      libelle: (code) => {
+        const d = DEPARTEMENTS.find((x) => x.code === code);
+        const pct = verdict.parDept[code];
+        // Participation LOCALE (dérivée, jamais stockée) : l'écart entre
+        // territoires est justement la leçon de la fiche abstention.
+        return `${d ? d.nom : code} — ${pct !== undefined ? pct : '?'} % pour votre majorité, participation ${participationDepartement(code)} %`;
+      },
+    });
+    root.querySelector('#gvn-voir-fiche-presidentielle').addEventListener('click', () => consulterFiche('election-presidentielle'));
+  }
   root.querySelector('#gvn-nouvelle-partie').addEventListener('click', () => {
     if (!confirm('Démarrer un nouveau mandat ? Le bilan de la partie actuelle sera définitivement perdu.')) return;
     update((s) => { s.monde.gouverner = null; });

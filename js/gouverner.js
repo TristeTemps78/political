@@ -5,7 +5,7 @@
 // par le plan (assemblee passée en paramètre, échéances reconnues dans le journal).
 
 import { FAMILLES, DEPARTEMENTS, MAJORITE_ABSOLUE, CIRCOS, mulberry32 } from './data.js';
-import { PERSONAS, AXES_GOUVERNER, poidsSegments, reagirPersona, tirerRecit } from './personas.js';
+import { PERSONAS, AXES_GOUVERNER, poidsSegments, reagirPersona, tirerRecit, participation } from './personas.js';
 import { CALENDRIER, EVENEMENTS } from './mandat.js';
 
 // Toute constante d'économie du mode Gouverner vit ici, avec sa justification
@@ -27,6 +27,27 @@ export const ECONOMIE_GOUVERNER = {
   CENSURES_AVANT_DEMISSION: 2,             // 2 motions adoptées → démission (fin de partie), cf. plan
   PROBA_EVENEMENT: 0.35,                    // ~1 crise tous les 3 tours en moyenne, rythme d'un mandat réel
   SOLDE_INIT: -40,                           // Md€/an, déficit de départ réaliste (ordre de grandeur pédagogique)
+
+  // --- Élections intermédiaires (E6) ---------------------------------------
+  SIGMOID_K_VERDICT: 40,                      // pente de la logistique humeur→soutien : à ±40 d'humeur (rarement
+                                               // dépassé en pratique), le soutien est déjà nettement majoritaire/
+                                               // minoritaire (~73 %/27 %) sans jamais saturer complètement 0/100 %.
+  SEUIL_EUROPEENNES_MALUS: 45,                // un score < 45 % à un scrutin-sondage grandeur nature (participation
+                                               // plus faible, vote plus contestataire) se lit comme un désaveu net.
+  MALUS_EUROPEENNES_HUMEUR: 4,                // sanction politique modérée (environ 2/3 de l'USURE_493) : l'onde de
+                                               // choc d'un mauvais résultat intermédiaire, sans plomber tout le mandat.
+  SEUIL_SENAT_HOSTILE: 45,                    // en dessous de 45 % de popularité au renouvellement partiel, le
+                                               // collège des grands électeurs (élus locaux, plus lents à bouger que
+                                               // l'opinion) bascule contre le gouvernement ; au-dessus, il reste prudent.
+  SURCOUT_NAVETTE_SENAT_HOSTILE: 0.15,        // +15 % sur le coût budgétaire d'une décision quand le Sénat est
+                                               // hostile : la navette qui s'éternise (allers-retours, CMP, dernier mot
+                                               // de l'Assemblée) renchérit le compromis final, sans le rendre impossible.
+  N_DEPTS_CHOC_MUNICIPALES: 3,                // aux municipales, les 3 départements aux deux extrêmes de l'humeur
+                                               // reçoivent un choc local : lisible sur la carte, pas un bruit généralisé.
+  CHOC_MUNICIPALES_NEGATIF: -8,               // choc local supplémentaire (ordre de grandeur d'une crise ponctuelle)
+                                               // là où l'ancrage est déjà le plus faible : la défaite locale nourrit la défiance.
+  CHOC_MUNICIPALES_POSITIF: 4,                // récompense deux fois plus faible que la sanction — asymétrie
+                                               // documentée : l'électorat sanctionne plus qu'il ne récompense.
 };
 
 const arrondi = (v) => Math.round(v * 10) / 10;
@@ -45,6 +66,50 @@ function moyennePondereeHumeurs(g) {
   let somme = 0;
   for (const p of PERSONAS) somme += (g.personas[p.id]?.humeur || 0) * POIDS_POPULATION[p.id];
   return somme / TOTAL_POIDS_POPULATION;
+}
+
+// Fonction logistique : convertit une humeur ∈ [-100,100] en probabilité de
+// soutien ∈ ]0,1[ — jamais 0 % ni 100 % pile, même à humeur extrême (aucun
+// département n'est acquis à 100 % d'avance, cf. election2032).
+function sigmoid(x, k) {
+  return 1 / (1 + Math.exp(-x / k));
+}
+
+// Moyenne pondérée des humeurs, poids = population × participation : sert au
+// score des européennes (élection intermédiaire où l'abstention pèse déjà
+// lourd, cf. fiche 'abstention-participation'). Un persona mécontent qui vote
+// pèse davantage ici qu'un persona content mais abstentionniste.
+function humeurPondereeParticipation(g) {
+  let num = 0, denom = 0;
+  for (const p of PERSONAS) {
+    const w = POIDS_POPULATION[p.id] * participation(p.rapport);
+    num += w * (g.personas[p.id]?.humeur || 0);
+    denom += w;
+  }
+  return denom ? num / denom : 0;
+}
+
+// Participation nationale simulée aux scrutins intermédiaires : moyenne
+// pondérée (population) des taux de participation par rapport à la
+// politique. Ne dépend pas de l'humeur du moment (le rapport d'un persona à
+// la politique est stable) : seul l'écart entre scrutins de mobilisations
+// différentes justifierait une variation, hors périmètre de ce modèle simple.
+function participationNationaleSimulee() {
+  let num = 0;
+  for (const p of PERSONAS) num += POIDS_POPULATION[p.id] * participation(p.rapport);
+  return Math.round((num / TOTAL_POIDS_POPULATION) * 100);
+}
+
+// Taux de participation simulé d'UN département ∈ [0,100], dérivé (jamais
+// stocké, même logique que humeurDepartement) : moyenne des taux de
+// participation des personas, pondérée par leur poids local (poidsSegments).
+// Réutilisé par election2032 (verdict départemental) et par l'UI (libellé de
+// la carte du verdict) sans dupliquer le calcul.
+export function participationDepartement(codeDept) {
+  const poids = poidsSegments(codeDept);
+  let total = 0;
+  for (const p of PERSONAS) total += (poids[p.id] || 0) * participation(p.rapport);
+  return Math.round(total * 100);
 }
 
 function journaliser(g, texte) {
@@ -116,7 +181,17 @@ export function creerPartie({ seed, familleId, assemblee } = {}) {
     enCours: null,      // texte en discussion { reformeId, phase } — machine à états (E4)
     evenementEnCours: null, // dernier événement tiré, en attente d'une réponse du joueur
     fichesVues: [], journal: [],
-    fin: null, // { type: 'reelu'|'battu'|'censure'|'demission', tour }
+    fin: null, // { type: 'reelu'|'battu'|'censure'|'demission', tour, verdict? }
+    // Dernière échéance électorale intermédiaire résolue (européennes,
+    // sénatoriales, municipales) : { type, tour, fiche, resultat }. Champ
+    // d'état dédié plutôt qu'un simple parsing du journal — celui-ci est
+    // plafonné (JOURNAL_MAX) et purement textuel, impropre à piloter de façon
+    // fiable un bouton « voir la fiche » côté UI. Un seul petit objet, écrasé
+    // à chaque nouvelle échéance : aucune croissance non bornée, ajout au
+    // schéma v3 assumé (cf. plan E6, aucune migration nécessaire : cette
+    // partie du store n'est jamais lue par ancienne version du code, seule la
+    // forme retournée par creerPartie compte).
+    derniereEcheance: null,
   };
 }
 
@@ -187,7 +262,18 @@ export function finDeTour(g, decision = DECISION_VIDE) {
     journaliser(g, `🏛️ ${decision.libelle}`);
   }
   g.jauges.popularite = clamp(Math.round(50 + moyennePondereeHumeurs(g) / 2), 0, 100);
-  g.jauges.solde = arrondi(g.jauges.solde + (decision.cout || 0));
+  // Sénat hostile (cf. échéance sénatoriales, point 6 ci-dessous) : la navette
+  // parlementaire qui s'éternise renchérit le coût d'une dépense engagée ce
+  // mois-ci (+SURCOUT_NAVETTE_SENAT_HOSTILE), tous types de décision confondus
+  // — distinguer réforme votée / réponse à un événement / PLF demanderait de
+  // faire transiter un identifiant depuis assemblee.js/mandat.js, hors
+  // périmètre de cette étape ; l'essentiel des décisions à coût de ce mode
+  // passe de toute façon par le Parlement (textes, budget).
+  let coutEffectif = decision.cout || 0;
+  if (g.senatHostile && coutEffectif < 0) {
+    coutEffectif = arrondi(coutEffectif * (1 + ECONOMIE_GOUVERNER.SURCOUT_NAVETTE_SENAT_HOSTILE));
+  }
+  g.jauges.solde = arrondi(g.jauges.solde + coutEffectif);
 
   // 5. Opposition : censure spontanée si popularité basse et Assemblée hostile.
   // Mécanique complète (négociation, vote à 289) posée en E4 (js/assemblee.js) ;
@@ -205,6 +291,9 @@ export function finDeTour(g, decision = DECISION_VIDE) {
   // 6. Échéances du calendrier + tirage d'un événement (déterminisme total).
   const echeance = CALENDRIER.find((e) => e.tour === g.tour);
   if (echeance) journaliser(g, `📅 ${echeance.libelle}`);
+  if (echeance?.type === 'europeennes') resoudreEuropeennes(g);
+  else if (echeance?.type === 'senatoriales') resoudreSenatoriales(g);
+  else if (echeance?.type === 'municipales') resoudreMunicipales(g);
   if (!g.fin && rng() < ECONOMIE_GOUVERNER.PROBA_EVENEMENT) {
     const evt = EVENEMENTS[Math.floor(rng() * EVENEMENTS.length)];
     g.evenementEnCours = { id: evt.id, titre: evt.titre };
@@ -216,10 +305,118 @@ export function finDeTour(g, decision = DECISION_VIDE) {
   // 7. Avancement du tour et détection de fin.
   g.tour += 1;
   if (!g.fin && g.tour >= 60) {
-    // Verdict département par département : détaillé en E6 (election2032).
-    g.fin = { type: 'reelu', tour: g.tour };
-    journaliser(g, '🗳️ Fin de mandat — le verdict des urnes tombe (détail : élection 2032).');
+    election2032(g);
   }
+  return g;
+}
+
+// --- Élections intermédiaires (E6) ------------------------------------------
+
+// Européennes 2029 (t=24) : moment pédagogique sur l'abstention aux scrutins
+// intermédiaires. Score du gouvernement = moyenne de la popularité courante
+// (sondage) et d'une popularité recalculée en pondérant les humeurs par la
+// PARTICIPATION de chaque persona (qui vote vraiment) — même formule que
+// jauges.popularite (50 + humeur/2), mais sur l'électorat qui se déplace.
+function resoudreEuropeennes(g) {
+  const humeurPart = humeurPondereeParticipation(g);
+  const scoreEuropeennes = clamp(Math.round((g.jauges.popularite + (50 + humeurPart / 2)) / 2), 0, 100);
+  const participationEuro = participationNationaleSimulee();
+  const malus = scoreEuropeennes < ECONOMIE_GOUVERNER.SEUIL_EUROPEENNES_MALUS;
+  journaliser(g, `🇪🇺 Élections européennes 2029 : score du gouvernement ${scoreEuropeennes} % (participation simulée ${participationEuro} %)${malus ? ' — sanction dans les urnes.' : '.'}`);
+  if (malus) {
+    for (const id in g.personas) {
+      g.personas[id].humeur = clamp(arrondi(g.personas[id].humeur - ECONOMIE_GOUVERNER.MALUS_EUROPEENNES_HUMEUR), -100, 100);
+    }
+    journaliser(g, '📉 Le résultat sanctionne la majorité : climat politique en léger repli.');
+  }
+  g.derniereEcheance = {
+    type: 'europeennes', tour: g.tour, fiche: 'abstention-participation',
+    resultat: { score: scoreEuropeennes, participation: participationEuro, malus },
+  };
+}
+
+// Sénatoriales (renouvellement partiel, t=27) : le Sénat, élu par un collège
+// de grands électeurs majoritairement locaux, bascule contre le gouvernement
+// sous SEUIL_SENAT_HOSTILE de popularité. Effet de jeu posé au point 4 de
+// finDeTour (surcoût de la navette parlementaire).
+function resoudreSenatoriales(g) {
+  g.senatHostile = g.jauges.popularite < ECONOMIE_GOUVERNER.SEUIL_SENAT_HOSTILE;
+  journaliser(g, `🏛️ Sénatoriales : le Sénat est désormais ${g.senatHostile ? 'hostile' : 'favorable'} (popularité ${g.jauges.popularite} %).`);
+  g.derniereEcheance = {
+    type: 'senatoriales', tour: g.tour, fiche: 'navette-parlementaire-senat',
+    resultat: { senatHostile: g.senatHostile, popularite: g.jauges.popularite },
+  };
+}
+
+// Municipales 2031 (t=45) : l'ancrage local se retourne contre (ou pour) le
+// gouvernement. Les N_DEPTS_CHOC_MUNICIPALES départements à l'humeur la plus
+// basse reçoivent un choc négatif supplémentaire, les N meilleurs un choc
+// positif plus modeste (asymétrie sanction/récompense).
+function resoudreMunicipales(g) {
+  const tries = DEPARTEMENTS
+    .map((d) => ({ code: d.code, humeur: humeurDepartement(g, d.code) }))
+    .sort((a, b) => a.humeur - b.humeur);
+  const n = ECONOMIE_GOUVERNER.N_DEPTS_CHOC_MUNICIPALES;
+  const pires = tries.slice(0, n).map((x) => x.code);
+  const meilleurs = tries.slice(-n).map((x) => x.code);
+  for (const code of pires) {
+    g.chocs[code] = clamp(arrondi((g.chocs[code] || 0) + ECONOMIE_GOUVERNER.CHOC_MUNICIPALES_NEGATIF), -100, 100);
+  }
+  for (const code of meilleurs) {
+    g.chocs[code] = clamp(arrondi((g.chocs[code] || 0) + ECONOMIE_GOUVERNER.CHOC_MUNICIPALES_POSITIF), -100, 100);
+  }
+  journaliser(g, `🏘️ Municipales 2031 : ancrage local sanctionné dans ${pires.length} département(s), renforcé dans ${meilleurs.length}.`);
+  g.derniereEcheance = {
+    type: 'municipales', tour: g.tour, fiche: 'autres-scrutins',
+    resultat: { deptsChocNegatif: pires, deptsChocPositif: meilleurs },
+  };
+}
+
+// --- Élection présidentielle 2032 (E6) --------------------------------------
+
+// Verdict département par département (t=59, second tour) : pour chaque
+// département, part de voix du gouvernement = moyenne pondérée (par
+// poidsSegments, comme humeurDepartement) du soutien de chaque persona
+// (sigmoïde de son humeur courante), les personas étant eux-mêmes pondérés
+// par leur PARTICIPATION — un persona mécontent qui vote pèse contre le
+// gouvernement, un persona content mais abstentionniste ne le sauve pas.
+// Département gagné si > 50 % (formule simple, déterministe, aucun aléa).
+// Verdict national = part des CIRCONSCRIPTIONS des départements gagnés (pas
+// un simple comptage de départements : un grand département gagné pèse plus
+// qu'un petit, comme le nombre réel de sièges qu'il représente).
+export function election2032(g) {
+  const parDept = {};
+  let circosGagnes = 0;
+  let circosTotal = 0;
+  let participationPonderee = 0;
+  for (const d of DEPARTEMENTS) {
+    const poids = poidsSegments(d.code);
+    const participationDept = participationDepartement(d.code); // ∈ [0,100], affichage seulement
+    // Le choc local courant (crise récente, municipales) pèse sur le vote du
+    // département, comme il pèse déjà sur humeurDepartement : cohérence entre
+    // la carte d'humeur affichée et le verdict rendu sur cette même carte.
+    const choc = g.chocs[d.code] || 0;
+    let numSupport = 0;
+    let denom = 0; // Σ poids·participation exact — pas l'entier arrondi de
+    // participationDepartement : autour du seuil des 50 % qui décide d'un
+    // département, l'arrondi du dénominateur suffirait à fausser le verdict.
+    for (const p of PERSONAS) {
+      const w = (poids[p.id] || 0) * participation(p.rapport);
+      const humeur = g.personas[p.id]?.humeur || 0;
+      numSupport += w * sigmoid(humeur + choc, ECONOMIE_GOUVERNER.SIGMOID_K_VERDICT);
+      denom += w;
+    }
+    const pourcentageGouv = clamp(denom > 0 ? Math.round((numSupport / denom) * 100) : 50, 0, 100);
+    parDept[d.code] = pourcentageGouv; // pourcentage ENTIER — contrainte de taille localStorage
+    circosTotal += d.circos;
+    participationPonderee += participationDept * d.circos;
+    if (pourcentageGouv > 50) circosGagnes += d.circos;
+  }
+  const national = Math.round((circosGagnes / circosTotal) * 100);
+  const participationNationale = Math.round(participationPonderee / circosTotal);
+  const type = national >= 50 ? 'reelu' : 'battu';
+  g.fin = { type, tour: g.tour, verdict: { parDept, national, participation: participationNationale } };
+  journaliser(g, `🗳️ Verdict de la présidentielle 2032 : ${national} % pour votre majorité (participation ${participationNationale} %) — vous êtes ${type === 'reelu' ? 'réélu(e)' : 'battu(e)'}.`);
   return g;
 }
 
