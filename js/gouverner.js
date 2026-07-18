@@ -32,6 +32,12 @@ export const ECONOMIE_GOUVERNER = {
   SIGMOID_K_VERDICT: 40,                      // pente de la logistique humeur→soutien : à ±40 d'humeur (rarement
                                                // dépassé en pratique), le soutien est déjà nettement majoritaire/
                                                // minoritaire (~73 %/27 %) sans jamais saturer complètement 0/100 %.
+  VOTE_BARRAGE_2032: 3,                       // décalage du centre de la sigmoïde au second tour 2032 : un électeur
+                                               // légèrement déçu vote quand même pour le sortant « contre l'alternative »
+                                               // (vote barrage — « au premier tour on choisit, au second on élimine »).
+                                               // Calibré par simulation (200 mandats) : 0 → réélection cohérente 50 %
+                                               // (médiane pile sur le seuil), 3 → 74 % — un bon mandat est récompensé,
+                                               // sans réélection automatique ; l'incohérente reste battue à 100 %.
   SEUIL_EUROPEENNES_MALUS: 45,                // un score < 45 % à un scrutin-sondage grandeur nature (participation
                                                // plus faible, vote plus contestataire) se lit comme un désaveu net.
   MALUS_EUROPEENNES_HUMEUR: 4,                // sanction politique modérée (environ 2/3 de l'USURE_493) : l'onde de
@@ -403,7 +409,7 @@ export function election2032(g) {
     for (const p of PERSONAS) {
       const w = (poids[p.id] || 0) * participation(p.rapport);
       const humeur = g.personas[p.id]?.humeur || 0;
-      numSupport += w * sigmoid(humeur + choc, ECONOMIE_GOUVERNER.SIGMOID_K_VERDICT);
+      numSupport += w * sigmoid(humeur + choc + ECONOMIE_GOUVERNER.VOTE_BARRAGE_2032, ECONOMIE_GOUVERNER.SIGMOID_K_VERDICT);
       denom += w;
     }
     const pourcentageGouv = clamp(denom > 0 ? Math.round((numSupport / denom) * 100) : 50, 0, 100);

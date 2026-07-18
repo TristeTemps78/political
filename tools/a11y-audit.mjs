@@ -7,6 +7,8 @@
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { creerPartie, finDeTour } from '../js/gouverner.js';
+import { REFORMES } from '../js/mandat.js';
 
 // Les dépendances (playwright-core, axe-core) sont résolues depuis le
 // répertoire d'exécution, pas depuis tools/ — le script peut vivre dans le
@@ -56,8 +58,7 @@ attendre((await page.evaluate(() => document.activeElement.id)) === 'btn-investi
   'focus conservé sur « Investir » après re-rendu (investissements répétés)');
 
 // --- axe-core sur chaque onglet ----------------------------------------------
-for (const onglet of ['quiz', 'carte', 'hemicycle', 'alliances', 'defis', 'profil']) {
-  await page.click(`[data-onglet="${onglet}"]`);
+async function axeScan(nom) {
   await page.waitForTimeout(400);
   // Neutraliser les toasts en cours de fondu : état transitoire hors périmètre WCAG,
   // source de faux positifs color-contrast.
@@ -67,8 +68,41 @@ for (const onglet of ['quiz', 'carte', 'hemicycle', 'alliances', 'defis', 'profi
     const r = await axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21aa'] });
     return r.violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.map((n) => n.html.slice(0, 120)) }));
   });
-  attendre(violations.length === 0, `axe [${onglet}] : ${violations.length ? JSON.stringify(violations) : 'aucune violation'}`);
+  attendre(violations.length === 0, `axe [${nom}] : ${violations.length ? JSON.stringify(violations) : 'aucune violation'}`);
 }
+
+for (const onglet of ['gouverner', 'quiz', 'carte', 'assemblee', 'defis', 'profil']) {
+  await page.click(`[data-onglet="${onglet}"]`);
+  await axeScan(onglet); // gouverner sans partie en cours = écran de lancement
+}
+
+// --- Écrans du mode Gouverner avec partie en cours ---------------------------
+// États générés par le VRAI moteur pur (aucun mock) puis injectés dans
+// localStorage : tour 25 (bannière des européennes affichée) et fin de mandat
+// (verdict 2032 sur la carte).
+function jouerTours(n) {
+  const g = creerPartie({ seed: 4242, familleId: 'eco-sociale' });
+  for (let i = 0; i < n && !g.fin; i++) {
+    const r = REFORMES[i % REFORMES.length];
+    finDeTour(g, { effets: r.effets, cout: r.cout, libelle: r.titre });
+  }
+  return g;
+}
+for (const [nom, partie] of [['gouverner mandat', jouerTours(25)], ['gouverner verdict 2032', jouerTours(65)]]) {
+  await page.evaluate((p) => {
+    const s = JSON.parse(localStorage.getItem('politiquest2027.v1'));
+    s.joueur.quizFaits = ['climat'];
+    s.joueur.guildeId = 'eco-sociale';
+    s.monde.gouverner = p;
+    localStorage.setItem('politiquest2027.v1', JSON.stringify(s));
+  }, partie);
+  await page.reload({ waitUntil: 'networkidle' }); // l'app démarre sur Gouverner (partie en cours)
+  await page.waitForSelector('#gvn-titre');
+  await axeScan(nom);
+}
+attendre((await page.evaluate(() => document.querySelectorAll('#gvn-carte-verdict [tabindex="0"]').length)) === 1,
+  'la carte du verdict n’expose qu’UN point de tabulation');
+await page.evaluate(() => { localStorage.clear(); });
 attendre(erreursJs.length === 0, `zéro erreur JavaScript (${erreursJs.join(' | ') || 'ok'})`);
 await browser.close();
 process.exit(echecs ? 1 : 0);

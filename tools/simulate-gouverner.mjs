@@ -6,9 +6,10 @@
 //   - « incohérente »  : zigzag contradictoire tour après tour, 49.3 systématique
 //                       tous les 4 tours, dépenses non maîtrisées.
 // Usage : node tools/simulate-gouverner.mjs [nbParties]
-// Pas d'assertions CI ici (prévues en E7) : le script affiche les résultats et
-// vérifie seulement que l'écart entre les deux stratégies est du bon signe.
+// Les cibles chiffrées vivent en assertions CI dans
+// tests/equilibrage-gouverner.test.mjs, qui importe simuler()/tauxReelu() d'ici.
 
+import { pathToFileURL } from 'node:url';
 import { creerPartie, finDeTour } from '../js/gouverner.js';
 import { REFORMES, EVENEMENTS } from '../js/mandat.js';
 import { PERSONAS } from '../js/personas.js';
@@ -123,17 +124,17 @@ function jouerMandat(seed, strategie) {
   return g;
 }
 
-function moyenne(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+export function moyenne(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
 function ecartType(arr) {
   const m = moyenne(arr);
   return Math.sqrt(moyenne(arr.map((v) => (v - m) ** 2)));
 }
 
-function simuler(strategie) {
+export function simuler(strategie, n = N) {
   const popularites = [];
   const soldes = [];
   const types = {};
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < n; i++) {
     const g = jouerMandat(2000 + i, strategie);
     popularites.push(g.jauges.popularite);
     soldes.push(g.jauges.solde);
@@ -142,11 +143,6 @@ function simuler(strategie) {
   }
   return { popularites, soldes, types };
 }
-
-console.log(`Simulation Gouverner sur ${N} mandats par stratégie (famille incarnée : ${FAMILLE_JOUEUR.nom})\n`);
-
-const coherente = simuler('coherente');
-const incoherente = simuler('incoherente');
 
 // Répartition des fins (E6 : reelu/battu/demission — 'reelu' n'est plus
 // systématique depuis election2032, verdict département par département).
@@ -158,10 +154,21 @@ function repartitionFins(res) {
     .join(', ');
 }
 
-function tauxReelu(res) {
+export function tauxReelu(res) {
   const total = Object.values(res.types).reduce((a, b) => a + b, 0) || 1;
   return ((res.types.reelu || 0) / total) * 100;
 }
+
+// Rapport CLI — seulement en exécution directe (`node tools/simulate-gouverner.mjs N`) :
+// le module est aussi importé par tests/equilibrage-gouverner.test.mjs, qui
+// porte les cibles chiffrées en assertions CI (E7).
+const executeDirectement = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (executeDirectement) {
+
+console.log(`Simulation Gouverner sur ${N} mandats par stratégie (famille incarnée : ${FAMILLE_JOUEUR.nom})\n`);
+
+const coherente = simuler('coherente');
+const incoherente = simuler('incoherente');
 
 function rapport(nom, res) {
   console.log(`Stratégie ${nom} :`);
@@ -181,4 +188,6 @@ console.log(`Signe attendu (cohérente > incohérente sur les deux jauges) : ${e
 const reeluCoherente = tauxReelu(coherente);
 const reeluIncoherente = tauxReelu(incoherente);
 console.log(`\nTaux de réélection — cohérente ${reeluCoherente.toFixed(0)}%, incohérente ${reeluIncoherente.toFixed(0)}%`);
-console.log(`Signe attendu (cohérente >> incohérente) : ${reeluCoherente > reeluIncoherente ? 'OK ✅' : 'À REGARDER ⚠️ (cibles chiffrées définitives en E7)'}`);
+console.log(`Cibles (assertions CI dans tests/equilibrage-gouverner.test.mjs) : cohérente ≥ 60 % réélue, incohérente ≥ 80 % battue : ${reeluCoherente >= 60 && (100 - reeluIncoherente) >= 80 ? 'OK ✅' : 'À REGARDER ⚠️'}`);
+
+}

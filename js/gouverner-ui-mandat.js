@@ -29,7 +29,7 @@ export function renderMandat(root, g, alFinDuTour, focaliserEntete = false) {
   root.innerHTML = `
     <div class="panel">
       <h3 id="gvn-titre" tabindex="-1">🇫🇷 Gouverner — ${date.libelle}</h3>
-      <p class="hint">Vous incarnez <strong style="color:${guilde.couleur}">${guilde.nom}</strong> —
+      <p class="hint">Vous incarnez <span class="pastille" style="background:${guilde.couleur}"></span><strong>${guilde.nom}</strong> —
       ${g.assemblee[g.familleId] || 0} sièges sur 577 à l’Assemblée (majorité relative).</p>
       <div class="gvn-jauges">
         ${jaugePopularite(g.jauges.popularite)}
@@ -54,7 +54,7 @@ export function renderMandat(root, g, alFinDuTour, focaliserEntete = false) {
     </div>
     <div class="panel">
       <h4>Journal du mandat</h4>
-      <ul class="gvn-journal">${[...g.journal].reverse().map((j) => `<li>${j}</li>`).join('') || '<li>Rien à signaler pour l’instant.</li>'}</ul>
+      <ul class="gvn-journal" tabindex="0" aria-label="Journal du mandat (défilable)">${[...g.journal].reverse().map((j) => `<li>${j}</li>`).join('') || '<li>Rien à signaler pour l’instant.</li>'}</ul>
     </div>`;
 
   if (focaliserEntete) root.querySelector('#gvn-titre').focus();

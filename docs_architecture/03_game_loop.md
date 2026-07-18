@@ -81,3 +81,107 @@ budget IA ∝ avance du joueur (rubber-banding plafonné à ×1,5).
 
 Ces trois propriétés sont désormais des tests exécutés en CI : toute modification du
 contenu éditorial (THEMES) ou des constantes ECONOMIE qui les casse fera échouer le build.
+
+## Boucle du mandat Gouverner (`finDeTour()`, js/gouverner.js)
+
+1 tour = 1 mois, 60 tours (juin 2027 → mai 2032). `finDeTour(g, decision)` reçoit la décision
+du mois (réforme votée à l'Assemblée, réponse à un événement, ou rien) et applique, dans
+l'ordre, les 7 phases commentées dans le code :
+
+1. **Effets → ligne politique** : les effets de la décision alimentent `g.ligne` par moyenne
+   mobile (poids `LIGNE_LISSAGE`) — la ligne suivie reflète la tendance du mandat, pas le
+   dernier coup de barre.
+2. **Réactions des personas** : chaque persona réagit (`reagirPersona`, produit scalaire de
+   son vecteur idéologique et de la direction des effets, pondéré par sa sensibilité) ; un
+   récit est tiré par le PRNG seedé du tour et journalisé si la réaction est non nulle.
+3. **Décroissance** : les humeurs s'estompent de `DECAY_HUMEUR` (10 %/tour) et les chocs
+   locaux de `DECAY_CHOC` (15 %/tour) — rien n'est figé pour un mandat de 5 ans ; un choc
+   déclaré ce mois-ci (`decision.choc`) est appliqué avant la décroissance.
+4. **Jauges** : la popularité est **recalculée entièrement** depuis la moyenne pondérée des
+   humeurs (jamais stockée comme un simple delta) ; le solde budgétaire encaisse le coût de la
+   décision, majoré de `SURCOUT_NAVETTE_SENAT_HOSTILE` si le Sénat est hostile. L'usure du
+   49.3 (`USURE_493`) est appliquée aux humeurs, pas directement à la popularité — sinon un
+   malus « en dur » s'évaporerait dès le recalcul du tour suivant.
+5. **Opposition** : si l'Assemblée est hostile (< `SEUIL_HOSTILITE_ASSEMBLEE` de sièges) et la
+   popularité basse (< `SEUIL_CENSURE_SPONTANEE`), une motion de censure spontanée peut être
+   adoptée (`PROBA_CENSURE_SPONTANEE` par tour) — mécanique minimale, distincte du vote
+   complet à 289 voix de `js/assemblee.js:voterCensure`.
+6. **Calendrier et événements** : reconnaissance d'une échéance du calendrier (PLF,
+   européennes, sénatoriales, municipales — cf. `js/mandat.js:CALENDRIER`) puis, si aucune
+   fin n'est encore actée, tirage déterministe d'un nouvel événement (`PROBA_EVENEMENT`).
+7. **Avancement** : `g.tour += 1` ; au tour 60, si le mandat n'est pas déjà terminé
+   (démission), `election2032()` calcule le verdict département par département.
+
+### Économie du mode Gouverner (constantes `ECONOMIE_GOUVERNER`, js/gouverner.js)
+
+| Constante | Valeur | Justification |
+|---|---|---|
+| `POPULARITE_INIT` | 52 | Léger état de grâce post-élection, sans excès. |
+| `K_REACTION` | 35 | Calibré pour qu'un produit scalaire ∈ [-1,1] × sensibilité produise au plus ±25 de réaction (borne dans `reagirPersona`). |
+| `USURE_493` | 6 | Coût de popularité du 49.3 : contourner le débat a un prix politique (appliqué à l'humeur, cf. phase 4 ci-dessus). |
+| `COUT_NEGOCIER` | 20 | Capital dépensé pour négocier un vote (`js/assemblee.js:negocier`). |
+| `RECOMP_FICHE` | 5 | Capital gagné à la 1re lecture d'une fiche « Le saviez-vous ? ». |
+| `DECAY_HUMEUR` | 0,1 (10 %/tour) | Les humeurs s'estompent : rien n'est figé pour tout un mandat. |
+| `DECAY_CHOC` | 0,15 (15 %/tour) | Les chocs locaux (crises ponctuelles) s'atténuent plus vite que les humeurs de fond. |
+| `LIGNE_LISSAGE` | 0,15 | Poids de la décision du mois dans la moyenne mobile de la ligne politique. |
+| `RECITS_MAX` | 12 | Plafond de récits par persona (mémoire bornée, cf. schéma v3). |
+| `JOURNAL_MAX` | 12 | Plafond du journal (mémoire bornée, cf. schéma v3). |
+| `SEUIL_HOSTILITE_ASSEMBLEE` | 0,35 | Gouvernement minoritaire si < 35 % des sièges — condition de censure spontanée. |
+| `SEUIL_CENSURE_SPONTANEE` | 30 | Popularité en dessous de laquelle une censure spontanée devient possible. |
+| `PROBA_CENSURE_SPONTANEE` | 0,12 | Probabilité par tour, sous condition — crédible sans être systématique. |
+| `CENSURES_AVANT_DEMISSION` | 2 | 2 motions adoptées → démission (fin de partie). |
+| `PROBA_EVENEMENT` | 0,35 | ~1 crise tous les 3 tours en moyenne — rythme d'un mandat réel. |
+| `SOLDE_INIT` | −40 Md€/an | Déficit de départ réaliste (ordre de grandeur pédagogique). |
+| `SIGMOID_K_VERDICT` | 40 | Pente de la logistique humeur→soutien : à ±40 d'humeur (rarement dépassé), le soutien est déjà nettement majoritaire/minoritaire (≈73 %/27 %) sans jamais saturer 0/100 %. |
+| `VOTE_BARRAGE_2032` | 3 | Cf. encart dédié ci-dessous. |
+| `SEUIL_EUROPEENNES_MALUS` | 45 | Un score < 45 % à ce scrutin-sondage grandeur nature (participation plus faible, vote plus contestataire) se lit comme un désaveu net. |
+| `MALUS_EUROPEENNES_HUMEUR` | 4 | Sanction politique modérée (environ 2/3 de `USURE_493`) : l'onde de choc d'un mauvais résultat intermédiaire, sans plomber tout le mandat. |
+| `SEUIL_SENAT_HOSTILE` | 45 | Sous 45 % de popularité au renouvellement partiel, le collège des grands électeurs (élus locaux, plus lents à bouger que l'opinion) bascule contre le gouvernement. |
+| `SURCOUT_NAVETTE_SENAT_HOSTILE` | 0,15 | Cf. encart dédié ci-dessous. |
+| `N_DEPTS_CHOC_MUNICIPALES` | 3 | Aux municipales, les 3 départements aux deux extrêmes de l'humeur reçoivent un choc local : lisible sur la carte, pas un bruit généralisé. |
+| `CHOC_MUNICIPALES_NEGATIF` / `CHOC_MUNICIPALES_POSITIF` | −8 / +4 | Cf. encart dédié ci-dessous (asymétrie sanction/récompense). |
+
+**`VOTE_BARRAGE_2032` (décalage de +3 sur l'humeur avant sigmoïde, au second tour 2032)** —
+modélise le vote barrage (« au premier tour on choisit, au second on élimine ») : un électeur
+légèrement déçu vote quand même pour le sortant « contre l'alternative ». Calibré par
+simulation (200 mandats, `tools/simulate-gouverner.mjs`) : à 0, la stratégie cohérente n'est
+réélue que dans 50 % des cas (la médiane des humeurs tombe pile sur le seuil de la
+sigmoïde) ; à 3, elle passe à 74 % — un bon mandat est récompensé, sans que la réélection ne
+devienne automatique (la stratégie incohérente, elle, reste battue à 100 %).
+
+**`SURCOUT_NAVETTE_SENAT_HOSTILE` (+15 % sur le coût budgétaire d'une décision)** — quand le
+Sénat est hostile (cf. `SEUIL_SENAT_HOSTILE`), la navette parlementaire qui s'éternise (allers-
+retours, commission mixte paritaire, dernier mot laissé à l'Assemblée) renchérit le compromis
+final, sans le rendre impossible. Appliqué à toute décision de coût, tous types confondus
+(réforme votée, réponse à un événement, PLF) — distinguer précisément l'origine d'un coût
+demanderait de faire transiter un identifiant depuis `assemblee.js`/`mandat.js`, hors
+périmètre de ce modèle.
+
+**Chocs des municipales, asymétriques (−8 / +4)** — l'ancrage local se retourne contre (ou
+pour) le gouvernement dans les départements aux extrêmes de l'humeur. La récompense
+(`CHOC_MUNICIPALES_POSITIF` = +4) est deux fois plus faible que la sanction
+(`CHOC_MUNICIPALES_NEGATIF` = −8) : asymétrie documentée, l'électorat sanctionne plus qu'il ne
+récompense.
+
+**Participation et abstention (`js/personas.js:PARTICIPATION`)** — chaque persona porte un
+taux de participation électorale ∈ [0,1] selon son rapport à la politique (conviction 0,88,
+engagement 0,85, … jusqu'à abstention 0,3), stable dans le temps (indépendant de l'humeur du
+moment). Cette table pondère les scrutins intermédiaires (européennes) et le verdict 2032 :
+un persona mécontent qui vote pèse contre le gouvernement, un persona content mais
+abstentionniste ne le sauve pas — la mécanique rend visible que l'abstention n'est pas neutre.
+
+### Équilibrage — mode Gouverner (`tests/equilibrage-gouverner.test.mjs`, `tools/simulate-gouverner.mjs`)
+
+Même méthode que la Conquête : deux stratégies scriptées (« cohérente » — alignée sur une
+ligne politique fixe, budget surveillé ; « incohérente » — zigzag contradictoire, 49.3
+systématique tous les 4 tours, dépenses non maîtrisées) jouent des mandats complets de
+60 tours avec le **vrai moteur**, à seeds fixes → résultat déterministe d'une exécution à
+l'autre.
+
+- ✅ Stratégie cohérente réélue sur ≥ 60 % des mandats — **mesuré 74 %** (100 mandats).
+- ✅ Stratégie incohérente battue sur ≥ 80 % des mandats — **mesuré 100 %** (100 mandats).
+- ✅ La cohérence paie sur les deux jauges (popularité et solde finaux, en moyenne).
+- ✅ Aucun mandat ne reste inachevé (le moteur termine toujours en ≤ 65 tours).
+
+Ces quatre propriétés sont des tests exécutés en CI : toute modification d'`ECONOMIE_GOUVERNER`
+ou d'`ECONOMIE_ASSEMBLEE` qui les casse fera échouer le build.

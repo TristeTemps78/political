@@ -1,6 +1,6 @@
 # Guide de test manuel — PolitiQuest 2027
 
-Branche : `claude/french-election-civic-game-bd78uh`. Durée totale : ~20 minutes.
+Branche : `claude/french-election-civic-game-bd78uh`. Durée totale : ~28 minutes.
 
 ## 0. Mise en route (2 min)
 
@@ -82,10 +82,56 @@ Ouvrir http://localhost:8080 — idéalement dans une fenêtre de navigation pri
 - [ ] Mode sombre : basculer le thème de l'OS → l'interface suit sans rechargement.
 - [ ] Mobile : réduire la fenêtre à ~400 px de large → navigation en bas, carte lisible.
 
+## 5 bis. Mode Gouverner (8 min)
+
+**Prérequis** : au moins 1 thème de la Boussole complété (bloque sinon l'accès, avec un lien
+vers 🧭). Rejoindre une famille politique déclenche le lancement (pas besoin d'avoir rejoint
+une guilde au préalable dans l'onglet Profil — le choix se fait sur l'écran de lancement).
+
+- [ ] **Écran de lancement** (onglet 🇫🇷, en 1re position) : choisir une famille politique ;
+      la case « Hériter du rapport de force de la carte Conquête » réutilise la composition de
+      l'Assemblée construite dans l'onglet Conquête si elle existe, sinon une Assemblée par
+      défaut (majorité relative, jamais absolue) est générée.
+- [ ] **Boucle de décision mensuelle** : dans l'agenda législatif, « Proposer une réforme » →
+      « Déposer un texte » → intentions de vote projetées par famille (Pour/Contre/Abstention
+      sur 577 sièges) ; « Négocier » une famille non acquise coûte 20 capital et bascule son
+      vote à « Pour ». « Mettre le texte au vote » ou « Engager la responsabilité (49.3) » —
+      dans ce dernier cas, une motion de censure est jouée aussitôt ; si elle est rejetée, le
+      texte passe et une usure de popularité s'applique (visible dans la jauge, puis s'estompe
+      progressivement au fil des tours).
+- [ ] **Réponse aux événements** : quand une crise survient (bandeau 🚨), les 2-3 réponses
+      proposées ont des effets et un coût budgétaire différents ; « Ne pas intervenir » est
+      toujours disponible.
+- [ ] **Échéances du calendrier** (avancer les tours en jouant, ou observer si vous y êtes
+      déjà) : européennes (tour 24) → bannière de résultat avec bouton « En savoir plus »
+      ouvrant la fiche `abstention-participation` ; sénatoriales (tour 27) → passage du Sénat
+      en hostile si la popularité est sous 45 %, surcoût visible ensuite sur le solde
+      budgétaire ; municipales (tour 45) → chocs locaux (positifs et négatifs) visibles sur la
+      carte de France.
+- [ ] **Fiches « Le saviez-vous ? »** : la première lecture d'une fiche (49.3, motion de
+      censure, dissolution, référendum, navette Sénat…) donne +5 capital, affiché dans la boîte
+      de dialogue ; relire la même fiche plus tard ne redonne rien.
+- [ ] **Fin de mandat** (tour 59/60, ou forcée par démission après 2 motions de censure
+      adoptées) : écran dédié avec le verdict département par département sur la carte de
+      France (couleur = pourcentage pour votre majorité), et la participation locale visible
+      dans l'infobulle de chaque département.
+- [ ] **Navigation clavier de la carte** : mêmes règles que la carte de Conquête — un seul
+      arrêt de tabulation pour l'ensemble des départements, ←/→ et ↑/↓ pour se déplacer,
+      Entrée pour ouvrir le détail d'un département.
+- [ ] **Journal défilable au clavier** : Tab jusqu'au journal du mandat (ou du résumé de fin de
+      mandat), puis flèches haut/bas pour faire défiler son contenu sans quitter le focus.
+
+```bash
+node --test tests/*.test.mjs        # inclut gouverner.test.mjs, personas.test.mjs,
+                                     # assemblee.test.mjs, equilibrage-gouverner.test.mjs
+node tools/simulate-gouverner.mjs 200   # attendu : réélection cohérente ~74 %, incohérente battue 100 %
+node tools/a11y-audit.mjs           # prérequis décrits en tête du script (tools/a11y-audit.mjs)
+```
+
 ## 6. Vérifications automatisées (optionnel, 2 min)
 
 ```bash
-node --test tests/*.test.mjs   # attendu : 25/25 pass
+node --test tests/*.test.mjs   # attendu : 93/93 pass
 node tools/simulate.mjs 500    # attendu : 1er contrôle ~5 investissements ; plafond solo ≪ 289
 ```
 

@@ -126,7 +126,7 @@ function renderFinMandat(root, g) {
       <button type="button" class="btn-secondaire" id="gvn-voir-fiche-presidentielle">📘 Comment se déroule une présidentielle ?</button>
       ` : ''}
       <h4>Résumé du mandat</h4>
-      <ul class="gvn-journal">${[...g.journal].reverse().map((j) => `<li>${j}</li>`).join('') || '<li>Aucun événement notable.</li>'}</ul>
+      <ul class="gvn-journal" tabindex="0" aria-label="Résumé du mandat (défilable)">${[...g.journal].reverse().map((j) => `<li>${j}</li>`).join('') || '<li>Aucun événement notable.</li>'}</ul>
       <button type="button" class="btn-primaire" id="gvn-nouvelle-partie">Nouvelle partie</button>
     </div>`;
   root.querySelector('#gvn-titre').focus();

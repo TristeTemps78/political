@@ -17,10 +17,12 @@ hors ligne après le premier chargement.
 ## Tester
 
 ```bash
-node --test tests/*.test.mjs   # 17 tests : référentiel, moteur d'affinité, équité, économie
-node tools/simulate.mjs 1000   # simulation d'équilibrage (vrai code du jeu sous Node)
-node tools/a11y-audit.mjs      # accessibilité : parcours clavier + axe-core (WCAG AA)
-                               # (nécessite un serveur statique + playwright-core + axe-core)
+node --test tests/*.test.mjs          # référentiel, moteur d'affinité, équité, économie,
+                                       # mode Gouverner (moteur, personas, institutions, équilibrage)
+node tools/simulate.mjs 1000          # équilibrage de la Conquête (vrai code du jeu sous Node)
+node tools/simulate-gouverner.mjs 200 # équilibrage du mandat Gouverner (mêmes principes)
+node tools/a11y-audit.mjs             # accessibilité : parcours clavier + axe-core (WCAG AA)
+                                       # (nécessite un serveur statique + playwright-core + axe-core)
 ```
 
 ## Accessibilité
@@ -37,6 +39,29 @@ Les propriétés clés sont testées en continu (CI GitHub Actions) : 577 circon
 sensibilité du moteur aux magnitudes d'allocation, **équité inter-familles** (σ < 0,05 sur
 profils aléatoires, chaque famille peut arriver en tête), premier contrôle rapide et
 plafond solo ≪ 289.
+
+## 🇫🇷 Gouverner — le mode central
+
+L'onglet **Gouverner** (première position dans la barre de navigation, et écran d'accueil
+automatique tant qu'un mandat est en cours) est le mode central de l'application : à partir
+d'une famille politique choisie sur la Boussole, il fait vivre un mandat complet de 2027 à
+2032 — 60 tours d'un mois chacun, jusqu'au verdict des urnes.
+
+Les institutions réelles de la Ve République sont le moteur du jeu, pas un habillage : vote
+d'un texte à l'Assemblée nationale (majorité des suffrages exprimés), article 49.3
+(engagement de responsabilité, avec une usure de popularité), motion de censure (adoptée à
+partir de 289 voix), dissolution (article 12, usage unique par mandat), référendum
+(article 11, réservé aux réformes touchant les institutions ou l'Europe), et navette avec un
+Sénat qui peut basculer hostile au renouvellement partiel (surcoût budgétaire sur les
+décisions qui suivent). La composition de départ de l'Assemblée peut, en option, hériter du
+rapport de force construit dans l'onglet Conquête.
+
+Dix **personas fictifs**, nettement étiquetés comme tels dans l'interface, réagissent chaque
+mois aux décisions du gouvernement selon leur rapport documenté à la politique (vote de
+conviction, défiance envers les institutions, abstention structurelle, vote utile…) ; leur
+humeur, agrégée par département, dessine le climat politique du mandat sur une **carte de
+France**. Le mandat se conclut par un **verdict département par département** à la
+présidentielle de 2032, sur cette même carte.
 
 ## Les trois strates de jeu
 
