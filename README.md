@@ -111,6 +111,17 @@ Toute l'ingénierie du projet est consignée dans [`docs_architecture/`](docs_ar
 | `02_data_schemas.md` | Schémas de persistance, modèles, contrat du futur backend multijoueur |
 | `03_game_loop.md` | Boucle de jeu et justification de chaque constante d'équilibrage |
 
+## Reprise du projet (agents et contributeurs)
+
+La suite du développement est entièrement balisée pour être reprise sans contexte préalable
+(y compris par un agent IA type Antigravity) :
+
+1. [`AGENTS.md`](AGENTS.md) — conventions non négociables du dépôt (à lire en premier) ;
+2. [`docs/AUDIT.md`](docs/AUDIT.md) — audit du code au 19/07/2026, constats identifiés et priorisés ;
+3. [`docs/ROADMAP.md`](docs/ROADMAP.md) — phases, dépendances, definition of done, suivi ;
+4. [`docs/plans/`](docs/plans/) — 20 plans autonomes de 1 à 3 h chacun (P01 à P20), exécutables
+   plan par plan dans l'ordre des dépendances.
+
 ## Neutralité
 
 Le jeu ne référence aucun parti ni aucune personne réelle : l'affinité se calcule vers des

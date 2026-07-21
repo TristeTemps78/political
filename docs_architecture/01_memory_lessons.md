@@ -142,3 +142,25 @@
   placés sur des partielles comptent double.
 - sw.js : penser à incrémenter le nom du cache (politiquest-v2) à chaque ajout de fichier
   au shell, sinon les anciens clients ne voient jamais les nouveaux modules.
+
+## Session « audit et transmission » — 19 juillet 2026
+
+### Décisions
+- Audit complet du code au commit 48d276c, consigné dans docs/AUDIT.md : 18 constats
+  identifiés (SEC/STR/PERF/TST/DOC/PWA) avec sévérités S1→S4 et table constats → plans.
+  Deux critiques : XSS via le pseudo des défis partagés (duels.js — seule entrée non
+  fiable du jeu) et réinitialisation destructive du store sur schéma inattendu (store.js).
+- La suite du projet est transmise à des agents externes : conventions dans AGENTS.md
+  (racine, chargé automatiquement par la plupart des agents), roadmap en 4 phases dans
+  docs/ROADMAP.md (A0 socle → A consolidation ∥ B contenu → C fonctionnalités), et
+  20 plans autonomes de 1-3 h dans docs/plans/ (P01-P20, template unique : fichiers
+  autorisés/interdits, étapes, critères d'acceptation en commandes copiables).
+- Périmètre choisi : consolidation/qualité, contenu, fonctionnalités. Publication,
+  backend et outillage npm restent hors périmètre (décision mainteneur requise).
+
+### Pièges (pour les agents qui reprennent)
+- `node --test tests/` échoue toujours : le glob `tests/*.test.mjs` est obligatoire.
+- Le duo SHELL + bump de CACHE dans sw.js reste le piège n° 1 — le plan P02 ajoute un
+  vérificateur automatique en CI (tools/verifier-sw.mjs) pour le neutraliser.
+- Ne pas « corriger » les choix assumés listés en §8 de docs/AUDIT.md (zéro dépendance,
+  innerHTML, RemoteAdapter prospectif, geo.js généré).
