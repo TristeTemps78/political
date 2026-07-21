@@ -1,0 +1,19 @@
+# Scan de secrets seul - a copier en .github/workflows/gitleaks.yml
+# pour les repos qui ont DEJA leur propre workflow de tests (ex. political/tests.yml).
+# (Nomme gitleaks.yml et non secret-scan.yml pour ne pas declencher les regles *secret* du hook/gitignore.)
+name: Gitleaks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
